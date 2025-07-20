@@ -98,10 +98,12 @@ func main() {
 	http.HandleFunc("/invite", func(w http.ResponseWriter, r *http.Request) {
 		users++
 
+		md := true
 		at := auth.NewAccessToken("devkey", "secret")
 		grant := &auth.VideoGrant{
-			RoomJoin: true,
-			Room:     "theater",
+			RoomJoin:             true,
+			Room:                 "theater",
+			CanUpdateOwnMetadata: &md,
 		}
 		at.AddGrant(grant).
 			SetIdentity(fmt.Sprintf("user%d", users)).
