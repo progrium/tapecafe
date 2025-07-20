@@ -5,20 +5,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
-	"github.com/andreykaipov/goobs"
-	"github.com/andreykaipov/goobs/api/requests/config"
-	obsconfig "github.com/andreykaipov/goobs/api/requests/config"
-	"github.com/andreykaipov/goobs/api/requests/inputs"
-	"github.com/andreykaipov/goobs/api/requests/sceneitems"
-	"github.com/andreykaipov/goobs/api/requests/stream"
-	"github.com/andreykaipov/goobs/api/typedefs"
 	"github.com/koding/websocketproxy"
 	"github.com/livekit/protocol/auth"
 	lkp "github.com/livekit/protocol/livekit"
@@ -29,7 +22,6 @@ import (
 )
 
 var users int
-var obsClient *goobs.Client
 
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
@@ -40,11 +32,6 @@ func main() {
 
 	// roomServiceClient := lksdk.NewRoomServiceClient("ws://localhost:7880", "devkey", "secret")
 	ingressClient := lksdk.NewIngressClient("ws://localhost:7880", "devkey", "secret")
-	obsClient, err = goobs.New("localhost:4455", goobs.WithPassword("password"))
-	if err != nil {
-		log.Println("connect:", err)
-		return
-	}
 
 	ctx := context.TODO()
 	lki, err := ingressClient.ListIngress(ctx, &lkp.ListIngressRequest{})
@@ -74,189 +61,30 @@ func main() {
 			return
 		}
 	}
+	_ = ingress // TODO
 
-	// Tape Cafe profile
-	profiles, err := obsClient.Config.GetProfileList(&obsconfig.GetProfileListParams{})
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	found = false
-	for _, p := range profiles.Profiles {
-		if p == "tapecafe" {
-			found = true
-		}
-	}
-	if !found {
-		_, err = obsClient.Config.CreateProfile(new(obsconfig.CreateProfileParams).WithProfileName("tapecafe"))
+	var l net.Listener
+	if token := os.Getenv("NGROK_TOKEN"); token != "" {
+		l, err = ngrok.Listen(context.Background(),
+			ngrokconfig.HTTPEndpoint(),
+			ngrok.WithAuthtoken(os.Getenv("NGROK_TOKEN")),
+		)
 		if err != nil {
-			log.Println(err)
+			log.Println("listen:", err)
 			return
 		}
-	}
-	if profiles.CurrentProfileName != "tapecafe" {
-		_, err = obsClient.Config.SetCurrentProfile(new(obsconfig.SetCurrentProfileParams).WithProfileName("tapecafe"))
+		log.Print(serviceURL(l) + "/invite")
+		// http.Serve(l, nil)
+	} else {
+		l, err = net.Listen("tcp4", ":8081")
 		if err != nil {
-			log.Println(err)
-			return
+			log.Fatalf("listen tcp: %v", err)
 		}
 	}
 
-	// tapecafe scenecollection
-	scl, err := obsClient.Config.GetSceneCollectionList(&obsconfig.GetSceneCollectionListParams{})
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	found = false
-	for _, sc := range scl.SceneCollections {
-		if sc == "tapecafe" {
-			found = true
-		}
-	}
-	if !found {
-		_, err = obsClient.Config.CreateSceneCollection(new(obsconfig.CreateSceneCollectionParams).WithSceneCollectionName("tapecafe"))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-	if scl.CurrentSceneCollectionName != "tapecafe" {
-		_, err = obsClient.Config.SetCurrentSceneCollection(new(obsconfig.SetCurrentSceneCollectionParams).WithSceneCollectionName("tapecafe"))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-
-	// get video settings
-	videoSettings, err := obsClient.Config.GetVideoSettings(new(obsconfig.GetVideoSettingsParams))
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// create background source
-	il, err := obsClient.Inputs.GetInputList(inputs.NewGetInputListParams())
-	if err != nil {
-		log.Println(err)
-		return
-	}
-	found = false
-	for _, i := range il.Inputs {
-		if i.InputName == "Background" {
-			found = true
-		}
-	}
-	if !found {
-		ir, err := obsClient.Inputs.CreateInput(new(inputs.CreateInputParams).
-			WithInputKind("image_source").
-			WithInputName("Background").
-			WithSceneItemEnabled(true).
-			WithSceneName("Scene").
-			WithInputSettings(map[string]any{
-				"file": filepath.Join(os.Getenv("DATAPATH"), "/home/hryx/src/tapecafe/frog.gif"),
-			}))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		_, err = obsClient.SceneItems.SetSceneItemTransform(sceneitems.NewSetSceneItemTransformParams().
-			WithSceneItemId(ir.SceneItemId).
-			WithSceneName("Scene").
-			WithSceneItemTransform(&typedefs.SceneItemTransform{
-				PositionX:    videoSettings.BaseWidth / 2,
-				PositionY:    videoSettings.BaseHeight / 2,
-				BoundsWidth:  videoSettings.BaseWidth,
-				BoundsHeight: videoSettings.BaseHeight,
-				BoundsType:   "OBS_BOUNDS_STRETCH",
-			}))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-
-	// create browser source
-	found = false
-	for _, i := range il.Inputs {
-		if i.InputName == "YouTube" {
-			found = true
-		}
-	}
-	if !found {
-		ir, err := obsClient.Inputs.CreateInput(new(inputs.CreateInputParams).
-			WithInputKind("browser_source").
-			WithInputName("YouTube").
-			WithSceneItemEnabled(true).
-			WithSceneName("Scene").
-			WithInputSettings(map[string]any{
-				"url":                 "", //"https://hopollo.github.io/OBS-Youtube-Player/?watch?v=lSqnqSSXTUI&list=RDlSqnqSSXTUI&volume=10&random=true&loop=true",
-				"reroute_audio":       true,
-				"restart_when_active": true,
-				"shutdown":            true,
-				"width":               535,
-				"height":              300,
-			}))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		_, err = obsClient.SceneItems.SetSceneItemTransform(sceneitems.NewSetSceneItemTransformParams().
-			WithSceneItemId(ir.SceneItemId).
-			WithSceneName("Scene").
-			WithSceneItemTransform(&typedefs.SceneItemTransform{
-				PositionX:    videoSettings.BaseWidth / 2,
-				PositionY:    videoSettings.BaseHeight / 2,
-				BoundsWidth:  videoSettings.BaseWidth,
-				BoundsHeight: videoSettings.BaseHeight,
-				BoundsType:   "OBS_BOUNDS_STRETCH",
-			}))
-		if err != nil {
-			log.Println(err)
-			return
-		}
-	}
-
-	// clear browser url
-	_, err = obsClient.Inputs.SetInputSettings(inputs.NewSetInputSettingsParams().
-		WithInputName("YouTube").
-		WithInputSettings(map[string]any{
-			"url": "",
-		}))
-	if err != nil {
-		log.Println("clear:", err)
-		return
-	}
-
-	// set stream config
-	_, err = obsClient.Config.SetStreamServiceSettings(config.NewSetStreamServiceSettingsParams().
-		WithStreamServiceType("rtmp_custom").
-		WithStreamServiceSettings(&typedefs.StreamServiceSettings{
-			Server: ingress.Url,
-			Key:    ingress.StreamKey,
-		}))
-	if err != nil {
-		log.Println(err)
-		return
-	}
-
-	// start stream
-	_, err = obsClient.Stream.StartStream(&stream.StartStreamParams{})
-	if err != nil {
-		log.Println("stream:", err)
-		return
-	}
-
-	l, err := ngrok.Listen(context.Background(),
-		ngrokconfig.HTTPEndpoint(),
-		ngrok.WithAuthtoken(os.Getenv("NGROK_TOKEN")),
-	)
-	if err != nil {
-		log.Println("listen:", err)
-		return
-	}
+	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {
+		log.Print("/hello")
+	})
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		u, _ := url.Parse("ws://localhost:7880")
@@ -286,7 +114,7 @@ func main() {
 			return
 		}
 
-		lkURL := strings.ReplaceAll(l.URL(), "https:", "wss:")
+		lkURL := strings.ReplaceAll(serviceURL(l), "https:", "wss:")
 		meetURL := "https://meet.livekit.io/custom?liveKitUrl=%s&token=%s"
 		http.Redirect(w, r, fmt.Sprintf(meetURL, lkURL, token), http.StatusTemporaryRedirect)
 	})
@@ -316,12 +144,17 @@ func main() {
 		_ = chatRoom
 	}()
 
-	log.Print(l.URL() + "/invite")
-	http.Serve(l, nil)
+	log.Fatal(http.Serve(l, nil))
 }
 
-func ptr(s string) *string {
-	return &s
+func serviceURL(l net.Listener) string {
+	if tun, ok := l.(ngrok.Tunnel); ok {
+		return tun.URL()
+	}
+	if url := os.Getenv("SERVICE_URL"); url != "" {
+		return url
+	}
+	return "http://" + l.Addr().String()
 }
 
 func onDataPacket(data lksdk2.DataPacket, params lksdk2.DataReceiveParams) {
@@ -331,17 +164,17 @@ func onDataPacket(data lksdk2.DataPacket, params lksdk2.DataReceiveParams) {
 		panic(err)
 	}
 	log.Println("CHAT:", m["message"])
-	if video, ok := detectYouTubeURL(m["message"].(string)); ok {
-		_, err := obsClient.Inputs.SetInputSettings(&inputs.SetInputSettingsParams{
-			InputName: ptr("YouTube"),
-			InputSettings: map[string]any{
-				"url": fmt.Sprintf("https://hopollo.github.io/OBS-Youtube-Player/?watch?v=%s&hideWhenStopped=true&quality=hd1080", video),
-			},
-		})
-		if err != nil {
-			log.Println(err)
-		}
-	}
+	// if video, ok := detectYouTubeURL(m["message"].(string)); ok {
+	// 	_, err := obsClient.Inputs.SetInputSettings(&inputs.SetInputSettingsParams{
+	// 		InputName: ptr("YouTube"),
+	// 		InputSettings: map[string]any{
+	// 			"url": fmt.Sprintf("https://hopollo.github.io/OBS-Youtube-Player/?watch?v=%s&hideWhenStopped=true&quality=hd1080", video),
+	// 		},
+	// 	})
+	// 	if err != nil {
+	// 		log.Println(err)
+	// 	}
+	// }
 }
 
 func detectYouTubeURL(s string) (string, bool) {
