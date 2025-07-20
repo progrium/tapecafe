@@ -1,6 +1,8 @@
 module github.com/progrium/tapecafe
 
-go 1.24.5
+go 1.23.0
+
+toolchain go1.23.1
 
 require (
 	github.com/andreykaipov/goobs v1.5.6

@@ -34,6 +34,8 @@ var obsClient *goobs.Client
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
+	log.Println("starting...")
+
 	var err error
 
 	// roomServiceClient := lksdk.NewRoomServiceClient("ws://localhost:7880", "devkey", "secret")
