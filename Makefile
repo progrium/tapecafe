@@ -12,7 +12,7 @@ DIST_ARCH		?= arm64 amd64
 ## Link binary to the bin directory
 link: build
 	rm $(BIN)/$(NAME) || true
-	ln -s "$(PWD)/.local/bin/$(NAME)" $(BIN)/$(NAME)
+	ln -s "$(shell pwd)/.local/bin/$(NAME)" $(BIN)/$(NAME)
 .PHONY: link
 
 ## Build binary
