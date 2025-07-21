@@ -75,7 +75,7 @@ function ConnectForm({ onConnect }) {
         }
       } catch (error) {
         console.error('Error getting devices:', error)
-        alert('Error accessing camera/microphone. Please allow permissions and refresh.')
+        // User can continue without permissions
       }
     }
     
@@ -111,7 +111,7 @@ function ConnectForm({ onConnect }) {
         }
       } catch (error) {
         console.error('Error accessing media devices:', error)
-        alert(`Error starting preview: ${error.message}`)
+        // Preview is optional, user can continue without it
       }
     }
 
