@@ -295,26 +295,35 @@ function RoomContent({ displayName }) {
             </CarouselLayout>
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '0.5rem', 
+          flexShrink: 0,
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+        }}>
           <ControlBar controls={{ leave: true, holdToTalk: false }} />
-          <button
-            onClick={() => setShowSettings(!showSettings)}
-            style={{
-              padding: '0.625rem 1rem',
-              backgroundColor: 'var(--lk-control-bg)',
-              color: 'var(--lk-control-fg)',
-              border: 'none',
-              borderRadius: 'var(--lk-border-radius)',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--lk-control-hover-bg)'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--lk-control-bg)'}
-          >
-            ⚙️ Settings
-          </button>
+          <div style={{ flex: 1 }} />
+          <div className="lk-control-bar">
+            <button
+              onClick={() => setShowSettings(!showSettings)}
+              style={{
+                padding: '0.625rem 1rem',
+                backgroundColor: 'var(--lk-control-bg)',
+                color: 'var(--lk-control-fg)',
+                border: 'none',
+                borderRadius: 'var(--lk-border-radius)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--lk-control-hover-bg)'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--lk-control-bg)'}
+            >
+              ⚙️ Settings
+            </button>
+          </div>
         </div>
       </div>
       <div
