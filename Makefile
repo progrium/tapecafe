@@ -9,17 +9,17 @@ DIST_DIR		?= .local/dist
 DIST_OS			?= darwin windows linux
 DIST_ARCH		?= arm64 amd64
 
-## Link binary to the bin directory
+## Link/install the local binary
 link: build
-	rm $(BIN)/$(NAME) || true
-	ln -s "$(shell pwd)/.local/bin/$(NAME)" $(BIN)/$(NAME)
+	[ -f "$(BIN)/$(NAME)" ] && rm "$(BIN)/$(NAME)" || true
+	ln -fs "$(shell pwd)/.local/bin/$(NAME)" "$(BIN)/$(NAME)"
 .PHONY: link
 
 ## Build binary
 build:
 	go build -ldflags="-X main.Version=$(VERSION)" \
 		$(GOARGS) \
-		-o ./.local/bin/$(NAME) \
+		-o .local/bin/$(NAME) \
 		./cmd/$(NAME)
 .PHONY: build
 
@@ -28,7 +28,7 @@ DIST_TARGETS	:= $(foreach os, $(DIST_OS), $(foreach arch, $(DIST_ARCH), $(DIST_D
 $(DIST_TARGETS): $(DIST_DIR)/%:
 	GOOS=$(word 3, $(subst _, ,$@)) \
 	GOARCH=$(word 4, $(subst _, ,$@)) \
-	go build -ldflags="-X main.Version=$(VERSION) $(GOARGS) -o $@ ./cmd/$(NAME)	
+	go build -ldflags="-X main.Version=$(VERSION)" $(GOARGS) -o $@ ./cmd/$(NAME)	
 
 ## Build distribution binaries
 dist: $(DIST_TARGETS)
