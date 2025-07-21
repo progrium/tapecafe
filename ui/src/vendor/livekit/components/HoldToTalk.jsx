@@ -158,22 +158,30 @@ export function HoldToTalk({ onDeviceError, ...props }) {
   }, [])
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
+    <div 
+      style={{ position: 'relative', display: 'inline-block' }}
+      onMouseEnter={() => {
+        if (!hasPermissions) {
+          setShowTooltip(true)
+        }
+      }}
+      onMouseLeave={() => {
+        if (!hasPermissions) {
+          setShowTooltip(false)
+        }
+      }}
+    >
       <button
         onMouseDown={hasPermissions ? handleMouseDown : undefined}
         onMouseUp={hasPermissions ? handleMouseUp : undefined}
         onMouseEnter={(e) => {
           if (hasPermissions) {
             handleMouseEnter(e)
-          } else {
-            setShowTooltip(true)
           }
         }}
         onMouseLeave={(e) => {
           if (hasPermissions) {
             handleMouseLeave(e)
-          } else {
-            setShowTooltip(false)
           }
         }}
         onTouchStart={hasPermissions ? handleTouchStart : undefined}
@@ -202,32 +210,28 @@ export function HoldToTalk({ onDeviceError, ...props }) {
       {/* Tooltip */}
       {showTooltip && !hasPermissions && (
         <div style={{
-          position: 'absolute',
-          bottom: '100%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          marginBottom: '8px',
-          padding: '8px 12px',
-          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-          color: 'white',
-          borderRadius: '4px',
-          fontSize: '12px',
-          whiteSpace: 'nowrap',
+          position: 'fixed',
+          top: '50%',
+          left: 0,
+          right: '300px', // Assuming chat sidebar is ~300px wide
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transform: 'translateY(-50%)',
           zIndex: 1000,
           pointerEvents: 'none'
         }}>
-          Allow camera/mic permissions to talk
           <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 0,
-            height: 0,
-            borderLeft: '5px solid transparent',
-            borderRight: '5px solid transparent',
-            borderTop: '5px solid rgba(0, 0, 0, 0.9)'
-          }} />
+            padding: '12px 16px',
+            backgroundColor: 'rgba(0, 0, 0, 0.95)',
+            color: 'white',
+            borderRadius: '8px',
+            fontSize: '14px',
+            whiteSpace: 'nowrap',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)'
+          }}>
+            Allow camera/mic permissions to talk
+          </div>
         </div>
       )}
     </div>
