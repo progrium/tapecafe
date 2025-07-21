@@ -10,7 +10,7 @@ import {
   useParticipants,
   useRoomContext,
 } from '@livekit/components-react'
-import { Chat, formatChatMessageLinks, Settings, ControlBar } from './vendor/livekit'
+import { Chat, formatChatMessageLinks, Settings, ControlBar, HoldToTalk } from './vendor/livekit'
 import { Track } from 'livekit-client'
 import { getRoomFromToken, getParticipantFromToken } from './utils'
 import { useState, useRef, useEffect } from 'react'
@@ -296,7 +296,7 @@ function RoomContent({ displayName }) {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
-          <ControlBar />
+          <ControlBar controls={{ leave: true, holdToTalk: false }} />
           <button
             onClick={() => setShowSettings(!showSettings)}
             style={{
@@ -404,6 +404,27 @@ function RoomContent({ displayName }) {
             style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}
             messageFormatter={formatChatMessageLinks}
           />
+        </div>
+
+        {/* Push-to-Talk Section */}
+        <div style={{
+          height: 'auto',
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          overflow: 'hidden',
+          display: 'flex',
+          flexDirection: 'column',
+          backgroundColor: 'rgb(29.75, 29.75, 29.75)', // Match chat background
+          flexShrink: 0
+        }}>
+          <div style={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '10px'
+          }}>
+            <HoldToTalk />
+          </div>
         </div>
       </div>
 

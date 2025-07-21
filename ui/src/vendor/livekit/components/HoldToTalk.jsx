@@ -101,9 +101,20 @@ export function HoldToTalk({ onDeviceError, ...props }) {
   }
 
   // Handle mouse leave to ensure we stop if cursor leaves button while holding
-  const handleMouseLeave = () => {
+  const handleMouseLeave = (e) => {
     if (isHoldingRef.current) {
       stopTalking()
+    }
+    // Reset to default background (slightly brighter than push-to-talk section)
+    if (!isHolding) {
+      e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.12)'
+    }
+  }
+
+  // Handle mouse enter for hover effect
+  const handleMouseEnter = (e) => {
+    if (!isHolding) {
+      e.target.style.backgroundColor = 'rgba(255, 255, 255, 0.20)'
     }
   }
 
@@ -120,14 +131,21 @@ export function HoldToTalk({ onDeviceError, ...props }) {
     <button
       onMouseDown={handleMouseDown}
       onMouseUp={handleMouseUp}
+      onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       disabled={isPublishing}
-      className={`lk-button lk-hold-to-talk ${isHolding ? 'lk-holding' : ''}`}
       style={{
-        backgroundColor: isHolding ? '#ff4444' : 'var(--lk-control-bg)',
+        padding: '0.625rem 1rem',
+        backgroundColor: isHolding ? '#ff4444' : 'rgba(255, 255, 255, 0.12)',
         color: isHolding ? 'white' : 'var(--lk-control-fg)',
+        border: 'none',
+        borderRadius: 'var(--lk-border-radius)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
         transition: 'background-color 0.1s ease',
         userSelect: 'none',
         touchAction: 'none'
