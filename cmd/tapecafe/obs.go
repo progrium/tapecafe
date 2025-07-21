@@ -1,63 +1,124 @@
 package main
 
 import (
-	"context"
-	"encoding/json"
-	"fmt"
 	"log"
-	"net"
-	"net/http"
-	"net/url"
 	"os"
 	"path/filepath"
-	"strings"
-	"time"
 
 	"github.com/andreykaipov/goobs"
 	"github.com/andreykaipov/goobs/api/requests/config"
-	obsconfig "github.com/andreykaipov/goobs/api/requests/config"
 	"github.com/andreykaipov/goobs/api/requests/inputs"
 	"github.com/andreykaipov/goobs/api/requests/sceneitems"
 	"github.com/andreykaipov/goobs/api/requests/stream"
 	"github.com/andreykaipov/goobs/api/typedefs"
-	"github.com/koding/websocketproxy"
-	"github.com/livekit/protocol/auth"
 	lkp "github.com/livekit/protocol/livekit"
-	lksdk "github.com/livekit/server-sdk-go"
-	lksdk2 "github.com/livekit/server-sdk-go/v2"
-	ngrokconfig "golang.ngrok.com/ngrok/config"
+	"tractor.dev/toolkit-go/engine/cli"
 )
 
-var obsClient *goobs.Client
+func obsCmd() *cli.Command {
+	cmd := &cli.Command{
+		Usage:  "obs [command]",
+		Hidden: true,
+	}
+	cmd.AddCommand(obsSetupCmd())
+	cmd.AddCommand(obsStartStreamCmd())
+	cmd.AddCommand(obsStopStreamCmd())
+	return cmd
+}
 
-func main() {
-	obsClient, err := goobs.New("localhost:4455", goobs.WithPassword("password"))
+func obsSetupCmd() *cli.Command {
+	cmd := &cli.Command{
+		Usage: "setup <ingress-url> <stream-key>",
+		Args:  cli.MinArgs(2),
+		Run: func(ctx *cli.Context, args []string) {
+			setupOBS(&lkp.IngressInfo{
+				Url:       args[0],
+				StreamKey: args[1],
+			})
+			log.Println("OBS setup complete")
+		},
+	}
+	return cmd
+}
+
+func obsStartStreamCmd() *cli.Command {
+	cmd := &cli.Command{
+		Usage: "start",
+		Run: func(ctx *cli.Context, args []string) {
+			startStream()
+		},
+	}
+	return cmd
+}
+
+func obsStopStreamCmd() *cli.Command {
+	cmd := &cli.Command{
+		Usage: "stop",
+		Run: func(ctx *cli.Context, args []string) {
+			stopStream()
+		},
+	}
+	return cmd
+}
+
+func startStream() {
+	obsClient, err := goobs.New("localhost:4455") // goobs.WithPassword("password")
 	if err != nil {
 		log.Println("connect:", err)
 		return
 	}
 
-	profiles, err := obsClient.Config.GetProfileList(&obsconfig.GetProfileListParams{})
+	// start stream
+	_, err = obsClient.Stream.StartStream(&stream.StartStreamParams{})
+	if err != nil {
+		log.Println("stream:", err)
+		return
+	}
+}
+
+func stopStream() {
+	obsClient, err := goobs.New("localhost:4455") // goobs.WithPassword("password")
+	if err != nil {
+		log.Println("connect:", err)
+		return
+	}
+
+	// stop stream
+	_, err = obsClient.Stream.StopStream(&stream.StopStreamParams{})
+	if err != nil {
+		log.Println("stream:", err)
+		return
+	}
+}
+
+func setupOBS(ingress *lkp.IngressInfo) {
+	obsClient, err := goobs.New("localhost:4455") // goobs.WithPassword("password")
+	if err != nil {
+		log.Println("connect:", err)
+		return
+	}
+
+	profiles, err := obsClient.Config.GetProfileList(&config.GetProfileListParams{})
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	found = false
+	found := false
 	for _, p := range profiles.Profiles {
 		if p == "tapecafe" {
 			found = true
 		}
 	}
 	if !found {
-		_, err = obsClient.Config.CreateProfile(new(obsconfig.CreateProfileParams).WithProfileName("tapecafe"))
+		_, err = obsClient.Config.CreateProfile(new(config.CreateProfileParams).WithProfileName("tapecafe"))
 		if err != nil {
 			log.Println(err)
 			return
 		}
 	}
 	if profiles.CurrentProfileName != "tapecafe" {
-		_, err = obsClient.Config.SetCurrentProfile(new(obsconfig.SetCurrentProfileParams).WithProfileName("tapecafe"))
+		_, err = obsClient.Config.SetCurrentProfile(new(config.SetCurrentProfileParams).WithProfileName("tapecafe"))
 		if err != nil {
 			log.Println(err)
 			return
@@ -65,7 +126,7 @@ func main() {
 	}
 
 	// tapecafe scenecollection
-	scl, err := obsClient.Config.GetSceneCollectionList(&obsconfig.GetSceneCollectionListParams{})
+	scl, err := obsClient.Config.GetSceneCollectionList(&config.GetSceneCollectionListParams{})
 	if err != nil {
 		log.Println(err)
 		return
@@ -77,14 +138,14 @@ func main() {
 		}
 	}
 	if !found {
-		_, err = obsClient.Config.CreateSceneCollection(new(obsconfig.CreateSceneCollectionParams).WithSceneCollectionName("tapecafe"))
+		_, err = obsClient.Config.CreateSceneCollection(new(config.CreateSceneCollectionParams).WithSceneCollectionName("tapecafe"))
 		if err != nil {
 			log.Println(err)
 			return
 		}
 	}
 	if scl.CurrentSceneCollectionName != "tapecafe" {
-		_, err = obsClient.Config.SetCurrentSceneCollection(new(obsconfig.SetCurrentSceneCollectionParams).WithSceneCollectionName("tapecafe"))
+		_, err = obsClient.Config.SetCurrentSceneCollection(new(config.SetCurrentSceneCollectionParams).WithSceneCollectionName("tapecafe"))
 		if err != nil {
 			log.Println(err)
 			return
@@ -92,7 +153,7 @@ func main() {
 	}
 
 	// get video settings
-	videoSettings, err := obsClient.Config.GetVideoSettings(new(obsconfig.GetVideoSettingsParams))
+	videoSettings, err := obsClient.Config.GetVideoSettings(new(config.GetVideoSettingsParams))
 	if err != nil {
 		log.Println(err)
 		return
@@ -203,10 +264,4 @@ func main() {
 		return
 	}
 
-	// start stream
-	_, err = obsClient.Stream.StartStream(&stream.StartStreamParams{})
-	if err != nil {
-		log.Println("stream:", err)
-		return
-	}
 }

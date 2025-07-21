@@ -20,18 +20,18 @@ RUN apk add --no-cache git
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 go build -o tapecafe .
+RUN CGO_ENABLED=0 go build -o tapecafe ./cmd/tapecafe
 
 
 FROM alpine:latest
 RUN apk add --no-cache supervisor redis gstreamer gst-plugins-base gst-plugins-good gst-plugins-bad gst-plugins-ugly gst-libav
 COPY --from=tapecafe-builder /app/tapecafe /app/tapecafe
-COPY --from=livekit-builder /livekit/livekit-server /app/livekit-server
-COPY --from=livekit-builder /livekit/ingress-server /app/ingress-server
+COPY --from=livekit-builder /livekit/livekit-server /usr/local/bin/livekit-server
+COPY --from=livekit-builder /livekit/ingress-server /usr/local/bin/ingress
 RUN mkdir -p /app /var/log
 COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 COPY livekit-server.yml /app/livekit-server.yml
 COPY livekit-ingress.yml /app/livekit-ingress.yml
-EXPOSE 8080
+EXPOSE 9091
 WORKDIR /app
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
