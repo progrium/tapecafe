@@ -29,16 +29,14 @@ function CustomParticipantName() {
     <div style={{
       position: 'absolute',
       bottom: '100%', // Anchor to bottom edge of text, grows upward
-      left: '50%',
-      transform: 'translateX(-50%)',
-      background: 'rgba(0, 0, 0, 0.7)', // Back to proper styling
+      left: 0,
+      right: 0,
+      background: 'rgba(0, 0, 0, 0.7)',
       color: 'white',
       padding: '4px 8px',
       borderRadius: '4px',
       fontSize: '12px',
       textAlign: 'center',
-      width: '100px',
-      minWidth: '100px',
       whiteSpace: 'normal',
       boxSizing: 'border-box',
       zIndex: 100,
@@ -49,13 +47,36 @@ function CustomParticipantName() {
   )
 }
 
-// Custom ParticipantTile that uses our display name - Fixed height with floating name
-export const CustomParticipantTile = forwardRef((props, ref) => {
+// Custom ParticipantTile that uses our display name - Responsive size based on popup state
+export const CustomParticipantTile = forwardRef(({ isVideoPoppedOut, ...props }, ref) => {
+  if (isVideoPoppedOut) {
+    // When video is popped out, fill the full height
+    return (
+      <div style={{
+        position: 'relative',
+        height: 'calc(100% - 80px)', // Full height minus padding
+        width: 'auto',
+        aspectRatio: '1/1', // Keep it square
+        margin: '0 auto' // Center in carousel
+      }}>
+        <CustomParticipantName />
+        <ParticipantTile ref={ref} {...props} style={{ width: '100%', height: '100%' }}>
+          <VideoTrack style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover' // Crop to fill the square
+          }} />
+        </ParticipantTile>
+      </div>
+    )
+  }
+  
+  // Normal size when video is not popped out
   return (
     <div style={{
       position: 'relative',
-      height: '100px', // Fixed height for consistent video size
-      width: '100px',  // Fixed width for square aspect
+      height: '100px',
+      width: '100px',
       margin: '0 auto' // Center in carousel
     }}>
       <CustomParticipantName />

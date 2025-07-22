@@ -295,11 +295,11 @@ function RoomContent({ displayName, url, token }) {
           }}>
             <CarouselLayout tracks={carouselTracks} style={{ 
               height: '100%', 
-              paddingTop: '50px', // More padding for longer names
+              paddingTop: isVideoPoppedOut ? '80px' : '50px', // More padding when expanded
               boxSizing: 'border-box',
               overflow: 'visible' // Allow content to overflow
             }}>
-              <CustomParticipantTile />
+              <CustomParticipantTile isVideoPoppedOut={isVideoPoppedOut} />
             </CarouselLayout>
           </div>
         </div>
