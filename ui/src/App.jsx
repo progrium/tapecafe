@@ -26,6 +26,7 @@ function App() {
     setShouldJoin(false)
   }
 
+
   return (
     <div>
       {!shouldJoin ? (

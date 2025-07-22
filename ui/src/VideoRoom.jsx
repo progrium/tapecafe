@@ -82,14 +82,14 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
         onDisconnected={handleDisconnected}
         onError={handleError}
       >
-        <RoomContent displayName={displayName} />
+        <RoomContent displayName={displayName} url={url} token={token} />
         <RoomAudioRenderer />
       </LiveKitRoom>
     </div>
   )
 }
 
-function RoomContent({ displayName }) {
+function RoomContent({ displayName, url, token }) {
   const { localParticipant } = useLocalParticipant()
   const allParticipants = useParticipants()
   const room = useRoomContext()
@@ -300,7 +300,106 @@ function RoomContent({ displayName }) {
         }}>
           <ControlBar controls={{ leave: true, holdToTalk: false }} />
           <div style={{ flex: 1 }} />
-          <div className="lk-control-bar">
+          <div className="lk-control-bar" style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={() => {
+                // Find the streambot video element
+                let videoElement = document.querySelector('video[data-lk-source="camera"]')
+                if (!videoElement) {
+                  videoElement = document.querySelector('.lk-grid-layout video')
+                }
+                if (!videoElement) {
+                  videoElement = document.querySelector('video')
+                }
+                
+                if (!videoElement || !videoElement.srcObject) {
+                  console.error('No video stream available to pop out')
+                  return
+                }
+                
+                // Open popup window
+                const popup = window.open('', 'videoPopout', 'width=800,height=600,resizable=yes,toolbar=no,menubar=no,scrollbars=no,status=no')
+                
+                if (popup) {
+                  popup.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                      <title>Video Stream</title>
+                      <style>
+                        body { margin: 0; padding: 0; background: black; overflow: hidden; }
+                        #video-container { 
+                          height: calc(100vh - 48px); 
+                          display: flex; 
+                          align-items: center; 
+                          justify-content: center; 
+                        }
+                        video { 
+                          max-width: 100%; 
+                          max-height: 100%; 
+                          object-fit: contain; 
+                        }
+                        #controls {
+                          height: 48px;
+                          background: rgba(0, 0, 0, 0.8);
+                          display: flex;
+                          align-items: center;
+                          justify-content: center;
+                          border-top: 1px solid rgba(255, 255, 255, 0.1);
+                        }
+                        button {
+                          padding: 8px 16px;
+                          background: rgba(255, 255, 255, 0.1);
+                          color: white;
+                          border: 1px solid rgba(255, 255, 255, 0.2);
+                          border-radius: 4px;
+                          cursor: pointer;
+                          font-size: 14px;
+                        }
+                        button:hover {
+                          background: rgba(255, 255, 255, 0.2);
+                        }
+                      </style>
+                    </head>
+                    <body>
+                      <div id="video-container">
+                        <video id="popout-video" autoplay muted playsinline></video>
+                      </div>
+                      <div id="controls">
+                        <button onclick="document.getElementById('video-container').requestFullscreen()">
+                          ⛶ Fullscreen
+                        </button>
+                      </div>
+                    </body>
+                    </html>
+                  `)
+                  popup.document.close()
+                  
+                  // Set the video stream once the popup loads
+                  setTimeout(() => {
+                    const popupVideo = popup.document.getElementById('popout-video')
+                    if (popupVideo && videoElement.srcObject) {
+                      popupVideo.srcObject = videoElement.srcObject
+                    }
+                  }, 100)
+                }
+              }}
+              style={{
+                padding: '0.625rem 1rem',
+                backgroundColor: 'var(--lk-control-bg)',
+                color: 'var(--lk-control-fg)',
+                border: 'none',
+                borderRadius: 'var(--lk-border-radius)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--lk-control-hover-bg)'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = 'var(--lk-control-bg)'}
+            >
+              📺 Pop out video
+            </button>
             <button
               onClick={() => setShowSettings(!showSettings)}
               style={{
