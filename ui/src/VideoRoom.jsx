@@ -149,17 +149,9 @@ function RoomContent({ displayName }) {
     room._tracksBeingAcquired = true
 
     const preAcquireTracks = async () => {
-      console.log('🎥 Local participant ready - checking permissions before creating tracks...')
+      console.log('🎥 Local participant ready - creating tracks for instant toggling...')
 
       try {
-        // First check if we have permissions
-        const permissionResult = await navigator.permissions.query({ name: 'microphone' })
-        if (permissionResult.state !== 'granted') {
-          console.log('⚠️ Microphone permission not granted, skipping track pre-acquisition')
-          room._tracksBeingAcquired = false
-          return
-        }
-
         // Import the necessary classes
         const { createLocalVideoTrack, createLocalAudioTrack } = await import('livekit-client')
 

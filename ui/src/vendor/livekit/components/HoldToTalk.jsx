@@ -6,8 +6,6 @@ export function HoldToTalk({ onDeviceError, ...props }) {
   const { localParticipant } = useLocalParticipant()
   const [isHolding, setIsHolding] = useState(false)
   const [isPublishing, setIsPublishing] = useState(false)
-  const [hasPermissions, setHasPermissions] = useState(false)
-  const [showTooltip, setShowTooltip] = useState(false)
   const isHoldingRef = useRef(false)
 
   const startTalking = async () => {
@@ -120,34 +118,6 @@ export function HoldToTalk({ onDeviceError, ...props }) {
     }
   }
 
-  // Check for media permissions on mount
-  useEffect(() => {
-    const checkPermissions = async () => {
-      try {
-        // Check if we already have pre-acquired tracks
-        if (room?._preAcquiredVideoTrack || room?._preAcquiredAudioTrack) {
-          setHasPermissions(true)
-          return
-        }
-
-        // Try to check permissions without triggering a prompt
-        const result = await navigator.permissions.query({ name: 'microphone' })
-        setHasPermissions(result.state === 'granted')
-        
-        // Listen for permission changes
-        result.addEventListener('change', () => {
-          setHasPermissions(result.state === 'granted')
-        })
-      } catch (error) {
-        // If permissions API not supported, assume no permissions
-        console.log('Permissions API not supported, assuming no permissions')
-        setHasPermissions(false)
-      }
-    }
-
-    checkPermissions()
-  }, [room])
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -158,78 +128,31 @@ export function HoldToTalk({ onDeviceError, ...props }) {
   }, [])
 
   return (
-    <div style={{ position: 'relative', display: 'inline-block' }}>
-      <button
-        onMouseDown={hasPermissions ? handleMouseDown : undefined}
-        onMouseUp={hasPermissions ? handleMouseUp : undefined}
-        onMouseEnter={(e) => {
-          if (hasPermissions) {
-            handleMouseEnter(e)
-          } else {
-            setShowTooltip(true)
-          }
-        }}
-        onMouseLeave={(e) => {
-          if (hasPermissions) {
-            handleMouseLeave(e)
-          } else {
-            setShowTooltip(false)
-          }
-        }}
-        onTouchStart={hasPermissions ? handleTouchStart : undefined}
-        onTouchEnd={hasPermissions ? handleTouchEnd : undefined}
-        disabled={isPublishing || !hasPermissions}
-        style={{
-          padding: '0.625rem 1rem',
-          backgroundColor: isHolding ? '#ff4444' : 'rgba(255, 255, 255, 0.12)',
-          color: isHolding ? 'white' : hasPermissions ? 'var(--lk-control-fg)' : 'rgba(255, 255, 255, 0.5)',
-          border: 'none',
-          borderRadius: 'var(--lk-border-radius)',
-          cursor: hasPermissions ? 'pointer' : 'not-allowed',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
-          transition: 'background-color 0.1s ease',
-          userSelect: 'none',
-          touchAction: 'none',
-          opacity: hasPermissions ? 1 : 0.6
-        }}
-        {...props}
-      >
-        {isHolding ? '🔴 Release to stop' : '🎙️ Hold to talk'}
-      </button>
-      
-      {/* Tooltip */}
-      {showTooltip && !hasPermissions && (
-        <div style={{
-          position: 'absolute',
-          bottom: '100%',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          marginBottom: '8px',
-          padding: '8px 12px',
-          backgroundColor: 'rgba(0, 0, 0, 0.9)',
-          color: 'white',
-          borderRadius: '4px',
-          fontSize: '12px',
-          whiteSpace: 'nowrap',
-          zIndex: 1000,
-          pointerEvents: 'none'
-        }}>
-          Allow camera/mic permissions to talk
-          <div style={{
-            position: 'absolute',
-            top: '100%',
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 0,
-            height: 0,
-            borderLeft: '5px solid transparent',
-            borderRight: '5px solid transparent',
-            borderTop: '5px solid rgba(0, 0, 0, 0.9)'
-          }} />
-        </div>
-      )}
-    </div>
+    <button
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      disabled={isPublishing}
+      style={{
+        padding: '0.625rem 1rem',
+        backgroundColor: isHolding ? '#ff4444' : 'rgba(255, 255, 255, 0.12)',
+        color: isHolding ? 'white' : 'var(--lk-control-fg)',
+        border: 'none',
+        borderRadius: 'var(--lk-border-radius)',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
+        transition: 'background-color 0.1s ease',
+        userSelect: 'none',
+        touchAction: 'none'
+      }}
+      {...props}
+    >
+      {isHolding ? '🔴 Release to stop' : '🎙️ Hold to talk'}
+    </button>
   )
 }
