@@ -11,6 +11,7 @@ import {
   useRoomContext,
 } from '@livekit/components-react'
 import { Chat, formatChatMessageLinks, Settings, ControlBar, HoldToTalk } from './vendor/livekit'
+import { CustomParticipantTile } from './components/CustomParticipantTile'
 import { Track } from 'livekit-client'
 import { getRoomFromToken, getParticipantFromToken } from './utils'
 import { useState, useRef, useEffect } from 'react'
@@ -291,7 +292,7 @@ function RoomContent({ displayName }) {
             pointerEvents: 'auto' // Ensure carousel controls remain interactive
           }}>
             <CarouselLayout tracks={carouselTracks} style={{ height: '100%' }}>
-              <ParticipantTile />
+              <CustomParticipantTile />
             </CarouselLayout>
           </div>
         </div>
