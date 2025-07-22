@@ -12,6 +12,7 @@ import {
 } from '@livekit/components-react'
 import { Chat, formatChatMessageLinks, Settings, ControlBar, HoldToTalk } from './vendor/livekit'
 import { CustomParticipantTile } from './components/CustomParticipantTile'
+import { StreamParticipantTile } from './components/StreamParticipantTile'
 import { Track } from 'livekit-client'
 import { getRoomFromToken, getParticipantFromToken } from './utils'
 import { useState, useRef, useEffect } from 'react'
@@ -279,7 +280,7 @@ function RoomContent({ displayName }) {
           {/* Grid Layout (only streambot) - Full size background */}
           <div style={{ position: 'absolute', inset: 0 }}>
             <GridLayout tracks={gridTracks} style={{ height: '100%' }}>
-              <ParticipantTile />
+              <StreamParticipantTile />
             </GridLayout>
           </div>
           {/* Carousel Layout (everyone except streambot) - Overlaid with transparent background */}
