@@ -101,6 +101,7 @@ function RoomContent({ displayName, url, token }) {
   const [chatWidth, setChatWidth] = useState(300)
   const [participantsHeight, setParticipantsHeight] = useState(150)
   const [showSettings, setShowSettings] = useState(false)
+  const [isVideoPoppedOut, setIsVideoPoppedOut] = useState(false)
   const isResizing = useRef(false)
   const isVerticalResizing = useRef(false)
   const startX = useRef(0)
@@ -271,19 +272,24 @@ function RoomContent({ displayName, url, token }) {
     <div style={{ display: 'flex', height: '100%', width: '100%', overflow: 'hidden' }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-          {/* Grid Layout (only streambot) - Full size background */}
-          <div style={{ position: 'absolute', inset: 0 }}>
+          {/* Grid Layout (only streambot) - Full size background - Hidden when popped out */}
+          <div style={{ 
+            position: 'absolute', 
+            inset: 0,
+            visibility: isVideoPoppedOut ? 'hidden' : 'visible'
+          }}>
             <GridLayout tracks={gridTracks} style={{ height: '100%' }}>
               <StreamParticipantTile />
             </GridLayout>
           </div>
-          {/* Carousel Layout (everyone except streambot) - Overlaid with transparent background */}
+          
+          {/* Carousel Layout (everyone except streambot) - Position changes based on popup state */}
           <div style={{
             position: 'absolute',
             left: 0,
             right: 0,
             bottom: 0,
-            height: '125px',
+            height: isVideoPoppedOut ? '100%' : '125px', // Full height when video is popped out
             pointerEvents: 'auto' // Ensure carousel controls remain interactive
           }}>
             <CarouselLayout tracks={carouselTracks} style={{ height: '100%' }}>
@@ -321,6 +327,16 @@ function RoomContent({ displayName, url, token }) {
                 const popup = window.open('', 'videoPopout', 'width=800,height=600,resizable=yes,toolbar=no,menubar=no,scrollbars=no,status=no')
                 
                 if (popup) {
+                  // Hide the main video in this window
+                  setIsVideoPoppedOut(true)
+                  
+                  // Listen for when the popup closes to restore the main video
+                  const checkClosed = setInterval(() => {
+                    if (popup.closed) {
+                      setIsVideoPoppedOut(false)
+                      clearInterval(checkClosed)
+                    }
+                  }, 1000)
                   popup.document.write(`
                     <!DOCTYPE html>
                     <html>
