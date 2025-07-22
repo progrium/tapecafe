@@ -9,17 +9,18 @@ function ConnectForm({ onConnect }) {
     const urlParams = new URLSearchParams(window.location.search)
     return urlParams.get('token') || ''
   })
-  const [displayName, setDisplayName] = useState(() => 
+  const [displayName, setDisplayName] = useState(() =>
     localStorage.getItem('displayName') || ''
   )
   const [devices, setDevices] = useState({ cameras: [], microphones: [] })
-  const [selectedCamera, setSelectedCamera] = useState(() => 
+  const [selectedCamera, setSelectedCamera] = useState(() =>
     localStorage.getItem('selectedCamera') || ''
   )
-  const [selectedMicrophone, setSelectedMicrophone] = useState(() => 
+  const [selectedMicrophone, setSelectedMicrophone] = useState(() =>
     localStorage.getItem('selectedMicrophone') || ''
   )
   const [stream, setStream] = useState(null)
+  const [hasPermissions, setHasPermissions] = useState(false)
   // Audio and video are always enabled (hardcoded to ON)
   const audioEnabled = true
   const videoEnabled = true
@@ -36,22 +37,23 @@ function ConnectForm({ onConnect }) {
     localStorage.setItem('selectedMicrophone', deviceId)
   }
 
-  // Get available devices
+  // Get available devices and check permissions
   useEffect(() => {
     async function getDevices() {
       try {
         // First request permissions to get device labels
         await navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-        
+
         const deviceList = await navigator.mediaDevices.enumerateDevices()
-        
+
         const cameras = deviceList.filter(device => device.kind === 'videoinput')
         const microphones = deviceList.filter(device => device.kind === 'audioinput')
-        
+
         console.log('Found', cameras.length, 'cameras and', microphones.length, 'microphones')
-        
+
         setDevices({ cameras, microphones })
-        
+        setHasPermissions(true) // Permissions granted successfully
+
         // Validate saved camera selection or set default
         const savedCamera = localStorage.getItem('selectedCamera')
         const cameraExists = cameras.find(cam => cam.deviceId === savedCamera)
@@ -62,7 +64,7 @@ function ConnectForm({ onConnect }) {
             handleCameraChange(cameras[0].deviceId)
           }
         }
-        
+
         // Validate saved microphone selection or set default
         const savedMicrophone = localStorage.getItem('selectedMicrophone')
         const microphoneExists = microphones.find(mic => mic.deviceId === savedMicrophone)
@@ -75,10 +77,10 @@ function ConnectForm({ onConnect }) {
         }
       } catch (error) {
         console.error('Error getting devices:', error)
-        alert('Error accessing camera/microphone. Please allow permissions and refresh.')
+        setHasPermissions(false) // Permissions denied
       }
     }
-    
+
     getDevices()
   }, [])
 
@@ -111,7 +113,7 @@ function ConnectForm({ onConnect }) {
         }
       } catch (error) {
         console.error('Error accessing media devices:', error)
-        alert(`Error starting preview: ${error.message}`)
+        setHasPermissions(false) // Update permission status if preview fails
       }
     }
 
@@ -128,24 +130,23 @@ function ConnectForm({ onConnect }) {
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (url && token && displayName.trim()) {
+    if (url && token && displayName.trim() && hasPermissions) {
       // Save display name to localStorage
       localStorage.setItem('displayName', displayName.trim())
-      
+
       // Stop preview stream before connecting
       if (stream) {
         stream.getTracks().forEach(track => track.stop())
       }
       onConnect(url, token, displayName.trim())
-    } else if (!displayName.trim()) {
-      alert('Please enter a display name')
     }
+    // No alert needed - the form validation and permission check handle this
   }
 
   return (
     <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-      <h1>LiveKit Video Conference</h1>
-      
+      <h1>Tape Cafe</h1>
+
       <div style={{ display: 'flex', gap: '20px', marginBottom: '20px' }}>
         {/* Device Preview */}
         <div style={{ flex: 1 }}>
@@ -156,19 +157,19 @@ function ConnectForm({ onConnect }) {
               autoPlay
               muted
               playsInline
-              style={{ 
-                width: '100%', 
-                height: '240px', 
+              style={{
+                width: '100%',
+                height: '240px',
                 objectFit: 'cover',
                 display: videoEnabled ? 'block' : 'none'
               }}
             />
             {!videoEnabled && (
-              <div style={{ 
-                width: '100%', 
-                height: '240px', 
-                display: 'flex', 
-                alignItems: 'center', 
+              <div style={{
+                width: '100%',
+                height: '240px',
+                display: 'flex',
+                alignItems: 'center',
                 justifyContent: 'center',
                 color: 'white',
                 fontSize: '18px'
@@ -177,7 +178,7 @@ function ConnectForm({ onConnect }) {
               </div>
             )}
           </div>
-          
+
           {/* Device Controls */}
           <div style={{ marginTop: '10px' }}>
             <div style={{ marginBottom: '10px' }}>
@@ -196,7 +197,7 @@ function ConnectForm({ onConnect }) {
                 ))}
               </select>
             </div>
-            
+
             <div style={{ marginBottom: '10px' }}>
               <label htmlFor="microphone">Microphone:</label>
               <select
@@ -213,17 +214,18 @@ function ConnectForm({ onConnect }) {
                 ))}
               </select>
             </div>
-            
-            {/* Camera and microphone are always enabled */}
-            <div style={{ 
-              padding: '8px', 
-              backgroundColor: '#e8f5e8', 
-              borderRadius: '4px', 
+
+            {/* Privacy Information Box - Always visible */}
+            <div style={{
+              padding: '8px',
+              backgroundColor: '#e3f2fd',
+              borderRadius: '4px',
               textAlign: 'center',
               fontSize: '14px',
-              color: '#2e7d2e'
+              color: '#1976d2',
+              marginTop: '10px'
             }}>
-              📹 Camera: ON • 🎤 Microphone: ON
+              Your video and audio will <b>not</b> be published when you join the room. You can press a button to temporarily enable them.
             </div>
           </div>
         </div>
@@ -241,9 +243,9 @@ function ConnectForm({ onConnect }) {
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Enter your display name"
                 required
-                style={{ 
-                  width: '100%', 
-                  padding: '8px', 
+                style={{
+                  width: '100%',
+                  padding: '8px',
                   marginTop: '5px',
                   border: '1px solid #ccc',
                   borderRadius: '4px'
@@ -259,9 +261,9 @@ function ConnectForm({ onConnect }) {
                 onChange={(e) => setUrl(e.target.value)}
                 placeholder="wss://your-livekit-server.com"
                 required
-                style={{ 
-                  width: '100%', 
-                  padding: '8px', 
+                style={{
+                  width: '100%',
+                  padding: '8px',
                   marginTop: '5px',
                   border: '1px solid #ccc',
                   borderRadius: '4px'
@@ -277,26 +279,44 @@ function ConnectForm({ onConnect }) {
                 onChange={(e) => setToken(e.target.value)}
                 placeholder="Your access token"
                 required
-                style={{ 
-                  width: '100%', 
-                  padding: '8px', 
+                style={{
+                  width: '100%',
+                  padding: '8px',
                   marginTop: '5px',
                   border: '1px solid #ccc',
                   borderRadius: '4px'
                 }}
               />
             </div>
-            <button 
+            {/* Permission Warning */}
+            {!hasPermissions && (
+              <div style={{
+                padding: '12px',
+                backgroundColor: '#ffeaea',
+                border: '1px solid #ffcdd2',
+                borderRadius: '4px',
+                marginBottom: '15px',
+                color: '#d32f2f',
+                fontSize: '14px',
+                textAlign: 'center'
+              }}>
+                For now, you must enable camera and microphone to continue.
+              </div>
+            )}
+
+            <button
               type="submit"
+              disabled={!hasPermissions || !url || !token || !displayName.trim()}
               style={{
                 width: '100%',
                 padding: '12px',
-                backgroundColor: '#2196F3',
+                backgroundColor: hasPermissions && url && token && displayName.trim() ? '#2196F3' : '#cccccc',
                 color: 'white',
                 border: 'none',
                 borderRadius: '4px',
                 fontSize: '16px',
-                cursor: 'pointer'
+                cursor: hasPermissions && url && token && displayName.trim() ? 'pointer' : 'not-allowed',
+                opacity: hasPermissions && url && token && displayName.trim() ? 1 : 0.6
               }}
             >
               Join Room
