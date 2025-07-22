@@ -289,10 +289,16 @@ function RoomContent({ displayName, url, token }) {
             left: 0,
             right: 0,
             bottom: 0,
-            height: isVideoPoppedOut ? '100%' : '125px', // Full height when video is popped out
-            pointerEvents: 'auto' // Ensure carousel controls remain interactive
+            height: isVideoPoppedOut ? '100%' : '160px', // Increased height to accommodate names
+            pointerEvents: 'auto', // Ensure carousel controls remain interactive
+            overflow: 'visible' // Allow names to extend beyond container
           }}>
-            <CarouselLayout tracks={carouselTracks} style={{ height: '100%' }}>
+            <CarouselLayout tracks={carouselTracks} style={{ 
+              height: '100%', 
+              paddingTop: '50px', // More padding for longer names
+              boxSizing: 'border-box',
+              overflow: 'visible' // Allow content to overflow
+            }}>
               <CustomParticipantTile />
             </CarouselLayout>
           </div>
