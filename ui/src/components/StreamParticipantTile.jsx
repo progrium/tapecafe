@@ -5,7 +5,7 @@ import { forwardRef } from 'react'
 export const StreamParticipantTile = forwardRef((props, ref) => {
   return (
     <ParticipantTile ref={ref} {...props}>
-      <VideoTrack />
+      <VideoTrack style={{ objectFit: 'contain' }} />
     </ParticipantTile>
   )
 })
