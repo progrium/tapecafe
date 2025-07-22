@@ -1,7 +1,6 @@
 import '@livekit/components-styles'
 import {
   LiveKitRoom,
-  ParticipantTile,
   RoomAudioRenderer,
   GridLayout,
   CarouselLayout,
@@ -57,11 +56,6 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
 
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-      {roomName && (
-        <div style={{ padding: '10px', background: '#f5f5f5', borderBottom: '1px solid #ccc', flexShrink: 0 }}>
-          <h2 style={{ margin: 0, fontSize: '16px' }}>Room: {roomName}</h2>
-        </div>
-      )}
       <LiveKitRoom
         video={false}
         audio={false}
