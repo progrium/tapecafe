@@ -24,6 +24,7 @@ func main() {
 	// hidden commands
 	root.AddCommand(livekitCmd())
 	root.AddCommand(obsCmd())
+	root.AddCommand(ffmpegCmd())
 
 	if err := cli.Execute(context.Background(), root, os.Args[1:]); err != nil {
 		log.Fatal(err)
