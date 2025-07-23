@@ -7,23 +7,23 @@ export const ChatEntry = forwardRef(function ChatEntry(
   ref
 ) {
   const { getParticipantDisplayName } = useParticipantNames()
-  
+
   const hasBeenEdited = !!entry.editTimestamp
   const time = new Date(entry.timestamp)
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'en-US'
-  
+
   // Check if this is a system message
   const isSystemMessage = entry.isSystemMessage || entry.from?.identity === 'system'
-  
+
   const formattedMessage = useMemo(() => {
     return messageFormatter ? messageFormatter(entry.message, isSystemMessage) : entry.message
   }, [entry.message, messageFormatter, isSystemMessage])
-  
+
   // Get participant display name from our context
-  const participantDisplayName = entry.from?.identity 
+  const participantDisplayName = entry.from?.identity
     ? getParticipantDisplayName(entry.from.identity)
     : (entry.from?.name ?? entry.from?.identity)
-  
+
   // Debug logging for chat names
   console.log('💬 ChatEntry render:', {
     identity: entry.from?.identity,
@@ -39,14 +39,14 @@ export const ChatEntry = forwardRef(function ChatEntry(
       <li
         ref={ref}
         className="lk-chat-entry lk-chat-system-message"
-        style={{ fontStyle: 'italic', color: '#888', textAlign: 'center', margin: '8px 0' }}
+        style={{ fontStyle: 'italic', color: '#888', textAlign: 'center', margin: '4px 0' }}
         {...props}
       >
         <span className="lk-message-body">{formattedMessage}</span>
       </li>
     )
   }
-  
+
   return (
     <li
       ref={ref}
@@ -93,7 +93,7 @@ export function formatChatMessageLinks(message, isSystemMessage = false) {
       <span dangerouslySetInnerHTML={{ __html: message }} />
     )
   }
-  
+
   // For regular messages, tokenize links but escape HTML
   return tokenize(message, createDefaultGrammar()).map((tok, i) => {
     if (typeof tok === 'string') {

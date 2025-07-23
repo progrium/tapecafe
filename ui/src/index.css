@@ -23,6 +23,7 @@ body {
 .lk-chat-entry {
   word-wrap: break-word;
   overflow-wrap: break-word;
+  display: block;
 }
 
 .lk-message-body {
