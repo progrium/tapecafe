@@ -109,7 +109,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
 
   // Filter out bot participants
   const participants = allParticipants.filter(participant =>
-    participant.identity !== 'streambot' && participant.identity !== 'chat-bot'
+    participant.identity !== 'streambot' && participant.identity !== 'chatbot'
   )
   const [chatWidth, setChatWidth] = useState(300)
   const [participantsHeight, setParticipantsHeight] = useState(150)
@@ -126,7 +126,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
   // Function to update individual participant volume
   const updateParticipantVolume = (participantIdentity, volume) => {
     setParticipantVolumes(prev => new Map(prev.set(participantIdentity, volume)))
-    
+
     // Find the participant and update their audio track volume
     const participant = allParticipants.find(p => p.identity === participantIdentity)
     if (participant) {
@@ -326,8 +326,8 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0 }}>
         <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
           {/* Grid Layout (only streambot) - Full size background - Hidden when popped out */}
-          <div style={{ 
-            position: 'absolute', 
+          <div style={{
+            position: 'absolute',
             inset: 0,
             visibility: isVideoPoppedOut ? 'hidden' : 'visible'
           }}>
@@ -335,7 +335,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
               <StreamParticipantTile />
             </GridLayout>
           </div>
-          
+
           {/* Carousel Layout (everyone except streambot) - Position changes based on popup state */}
           <div style={{
             position: 'absolute',
@@ -346,8 +346,8 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             pointerEvents: 'auto', // Ensure carousel controls remain interactive
             overflow: 'visible' // Allow names to extend beyond container
           }}>
-            <CarouselLayout tracks={carouselTracks} style={{ 
-              height: '100%', 
+            <CarouselLayout tracks={carouselTracks} style={{
+              height: '100%',
               paddingTop: isVideoPoppedOut ? '80px' : '50px', // More padding when expanded
               boxSizing: 'border-box',
               overflow: 'visible' // Allow content to overflow
@@ -356,10 +356,10 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             </CarouselLayout>
           </div>
         </div>
-        <div style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
-          gap: '0.5rem', 
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
           flexShrink: 0,
           borderTop: '1px solid rgba(255, 255, 255, 0.1)'
         }}>
@@ -390,7 +390,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                 {Math.round(streambotVolume * 100)}%
               </span>
             </div>
-            
+
             <button
               onClick={() => {
                 // Find the streambot video element
@@ -401,19 +401,19 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                 if (!videoElement) {
                   videoElement = document.querySelector('video')
                 }
-                
+
                 if (!videoElement || !videoElement.srcObject) {
                   console.error('No video stream available to pop out')
                   return
                 }
-                
+
                 // Open popup window
                 const popup = window.open('', 'videoPopout', 'width=800,height=600,resizable=yes,toolbar=no,menubar=no,scrollbars=no,status=no')
-                
+
                 if (popup) {
                   // Hide the main video in this window
                   setIsVideoPoppedOut(true)
-                  
+
                   // Listen for when the popup closes to restore the main video
                   const checkClosed = setInterval(() => {
                     if (popup.closed) {
@@ -428,16 +428,16 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                       <title>Video Stream</title>
                       <style>
                         body { margin: 0; padding: 0; background: black; overflow: hidden; }
-                        #video-container { 
-                          height: calc(100vh - 48px); 
-                          display: flex; 
-                          align-items: center; 
-                          justify-content: center; 
+                        #video-container {
+                          height: calc(100vh - 48px);
+                          display: flex;
+                          align-items: center;
+                          justify-content: center;
                         }
-                        video { 
-                          width: 100%; 
-                          height: 100%; 
-                          object-fit: contain; 
+                        video {
+                          width: 100%;
+                          height: 100%;
+                          object-fit: contain;
                         }
                         #controls {
                           height: 48px;
@@ -498,11 +498,11 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                         const volumeSlider = document.getElementById('volume-slider');
                         const volumePercentage = document.getElementById('volume-percentage');
                         const video = document.getElementById('popout-video');
-                        
+
                         volumeSlider.addEventListener('input', function() {
                           const volume = parseFloat(this.value);
                           volumePercentage.textContent = Math.round(volume * 100) + '%';
-                          
+
                           // Send volume change to parent window
                           if (window.opener) {
                             window.opener.postMessage({
@@ -516,7 +516,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                     </html>
                   `)
                   popup.document.close()
-                  
+
                   // Set the video stream once the popup loads
                   setTimeout(() => {
                     const popupVideo = popup.document.getElementById('popout-video')
