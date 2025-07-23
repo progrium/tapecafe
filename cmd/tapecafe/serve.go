@@ -111,7 +111,7 @@ func serveChat(conn *websocket.Conn) {
 		APIKey:              "devkey",
 		APISecret:           "secret",
 		RoomName:            "theater",
-		ParticipantIdentity: "chat-bot",
+		ParticipantIdentity: "chatbot",
 	}, &lksdk2.RoomCallback{
 		ParticipantCallback: lksdk2.ParticipantCallback{
 			OnDataPacket: func(data lksdk2.DataPacket, params lksdk2.DataReceiveParams) {
@@ -137,6 +137,27 @@ func serveChat(conn *websocket.Conn) {
 		log.Println("chat:", err)
 		return
 	}
+	// for {
+
+	// 	msg := map[string]any{
+	// 		"id": uuid.NewString(),
+	// 		// "ignoreLegacy": true,
+	// 		"message":   "Hello, world!",
+	// 		"timestamp": time.Now().UnixMilli(),
+	// 	}
+	// 	msgBytes, err := json.Marshal(msg)
+	// 	if err != nil {
+	// 		log.Println("chat marshal:", err)
+	// 		return
+	// 	}
+	// 	dp := lksdk2.UserData(msgBytes)
+	// 	dp.Topic = "lk-chat-topic"
+	// 	if err := room.LocalParticipant.PublishDataPacket(dp, lksdk2.WithDataPublishReliable(true), lksdk2.WithDataPublishTopic("lk-chat-topic")); err != nil {
+	// 		log.Println("chat publish:", err)
+	// 	}
+	// 	time.Sleep(5 * time.Second)
+	// }
+
 	<-done
 }
 
