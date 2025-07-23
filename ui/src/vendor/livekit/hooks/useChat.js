@@ -26,6 +26,7 @@ export function useChat(options) {
   const { chatMessages: originalMessages, send, isSending } = useOriginalChat(options)
   const [systemMessages, setSystemMessages] = useState([])
   const messageIdCounter = useRef(0)
+  const participantNames = useRef(new Map()) // Track previous names
 
   useEffect(() => {
     if (!room) return
@@ -33,6 +34,9 @@ export function useChat(options) {
     const handleLocalParticipantConnected = () => {
       if (room.localParticipant) {
         const participantName = getDisplayName(room.localParticipant)
+        // Store initial name for tracking changes
+        participantNames.current.set(room.localParticipant.identity, participantName)
+        
         const localJoinMessage = {
           id: `system-${messageIdCounter.current++}`,
           timestamp: Date.now(),
@@ -46,6 +50,9 @@ export function useChat(options) {
 
     const handleParticipantConnected = (participant) => {
       const participantName = getDisplayName(participant)
+      // Store initial name for tracking changes
+      participantNames.current.set(participant.identity, participantName)
+      
       const systemMessage = {
         id: `system-${messageIdCounter.current++}`,
         timestamp: Date.now(),
@@ -58,6 +65,9 @@ export function useChat(options) {
 
     const handleParticipantDisconnected = (participant) => {
       const participantName = getDisplayName(participant)
+      // Clean up tracked name
+      participantNames.current.delete(participant.identity)
+      
       const systemMessage = {
         id: `system-${messageIdCounter.current++}`,
         timestamp: Date.now(),
@@ -68,15 +78,56 @@ export function useChat(options) {
       setSystemMessages(prev => [...prev, systemMessage])
     }
 
+    const handleParticipantMetadataChanged = (metadata, participant) => {
+      // Handle different event parameter orders
+      const actualParticipant = participant || metadata
+      const actualMetadata = typeof metadata === 'string' ? metadata : actualParticipant?.metadata
+      
+      console.log('🔄 useChat: Metadata change event:', { metadata: actualMetadata, participant: actualParticipant?.identity })
+      
+      if (!actualParticipant?.identity) {
+        console.warn('⚠️ useChat: No participant or identity in metadata change event')
+        return
+      }
+      
+      const newName = getDisplayName(actualParticipant)
+      const oldName = participantNames.current.get(actualParticipant.identity)
+      console.log('📝 useChat: Name change detected:', { oldName, newName, identity: actualParticipant.identity })
+      
+      // Only create message if name actually changed
+      if (oldName && oldName !== newName) {
+        console.log('✅ useChat: Creating name change system message')
+        const systemMessage = {
+          id: `system-${messageIdCounter.current++}`,
+          timestamp: Date.now(),
+          message: `<b>${oldName}</b> changed their name to <b>${newName}</b>`,
+          from: { identity: 'system', name: 'System', isLocal: false },
+          isSystemMessage: true
+        }
+        setSystemMessages(prev => [...prev, systemMessage])
+        
+        // Update tracked name
+        participantNames.current.set(actualParticipant.identity, newName)
+      } else if (!oldName) {
+        // First time we're seeing this participant's name, store it
+        console.log('📝 useChat: Storing initial name for tracking:', newName)
+        participantNames.current.set(actualParticipant.identity, newName)
+      } else {
+        console.log('ℹ️ useChat: No name change detected (same name)')
+      }
+    }
+
     // Listen for when the room connection is established and local participant is ready
     room.on(RoomEvent.Connected, handleLocalParticipantConnected)
     room.on(RoomEvent.ParticipantConnected, handleParticipantConnected)
     room.on(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected)
+    room.on(RoomEvent.ParticipantMetadataChanged, handleParticipantMetadataChanged)
 
     return () => {
       room.off(RoomEvent.Connected, handleLocalParticipantConnected)
       room.off(RoomEvent.ParticipantConnected, handleParticipantConnected)
       room.off(RoomEvent.ParticipantDisconnected, handleParticipantDisconnected)
+      room.off(RoomEvent.ParticipantMetadataChanged, handleParticipantMetadataChanged)
     }
   }, [room])
 

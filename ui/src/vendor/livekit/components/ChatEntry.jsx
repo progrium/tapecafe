@@ -8,16 +8,16 @@ export const ChatEntry = forwardRef(function ChatEntry(
 ) {
   const { getParticipantDisplayName } = useParticipantNames()
   
-  const formattedMessage = useMemo(() => {
-    return messageFormatter ? messageFormatter(entry.message) : entry.message
-  }, [entry.message, messageFormatter])
-  
   const hasBeenEdited = !!entry.editTimestamp
   const time = new Date(entry.timestamp)
   const locale = typeof navigator !== 'undefined' ? navigator.language : 'en-US'
   
   // Check if this is a system message
   const isSystemMessage = entry.isSystemMessage || entry.from?.identity === 'system'
+  
+  const formattedMessage = useMemo(() => {
+    return messageFormatter ? messageFormatter(entry.message, isSystemMessage) : entry.message
+  }, [entry.message, messageFormatter, isSystemMessage])
   
   // Get participant display name from our context
   const participantDisplayName = entry.from?.identity 
@@ -86,7 +86,15 @@ export const ChatEntry = forwardRef(function ChatEntry(
   )
 })
 
-export function formatChatMessageLinks(message) {
+export function formatChatMessageLinks(message, isSystemMessage = false) {
+  // For system messages, allow HTML rendering (since we control the content)
+  if (isSystemMessage && (message.includes('<b>') || message.includes('<i>'))) {
+    return (
+      <span dangerouslySetInnerHTML={{ __html: message }} />
+    )
+  }
+  
+  // For regular messages, tokenize links but escape HTML
   return tokenize(message, createDefaultGrammar()).map((tok, i) => {
     if (typeof tok === 'string') {
       return tok
