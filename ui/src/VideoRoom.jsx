@@ -36,13 +36,13 @@ function getDisplayName(participant) {
 
 function VideoRoom({ url, token, displayName, onDisconnect }) {
   const roomName = getRoomFromToken(token)
-  const [volume, setVolume] = useState(1.0)
+  const [streambotVolume, setStreambotVolume] = useState(1.0)
 
   // Listen for volume changes from popup window
   useEffect(() => {
     const handleMessage = (event) => {
-      if (event.data.type === 'VOLUME_CHANGE') {
-        setVolume(event.data.volume)
+      if (event.data.type === 'STREAMBOT_VOLUME_CHANGE') {
+        setStreambotVolume(event.data.volume)
       }
     }
 
@@ -95,14 +95,14 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
         onDisconnected={handleDisconnected}
         onError={handleError}
       >
-        <RoomContent displayName={displayName} url={url} token={token} volume={volume} setVolume={setVolume} />
-        <RoomAudioRenderer volume={volume} />
+        <RoomContent displayName={displayName} url={url} token={token} streambotVolume={streambotVolume} setStreambotVolume={setStreambotVolume} />
+        <RoomAudioRenderer />
       </LiveKitRoom>
     </div>
   )
 }
 
-function RoomContent({ displayName, url, token, volume, setVolume }) {
+function RoomContent({ displayName, url, token, streambotVolume, setStreambotVolume }) {
   const { localParticipant } = useLocalParticipant()
   const allParticipants = useParticipants()
   const room = useRoomContext()
@@ -115,12 +115,52 @@ function RoomContent({ displayName, url, token, volume, setVolume }) {
   const [participantsHeight, setParticipantsHeight] = useState(150)
   const [showSettings, setShowSettings] = useState(false)
   const [isVideoPoppedOut, setIsVideoPoppedOut] = useState(false)
+  const [participantVolumes, setParticipantVolumes] = useState(new Map())
   const isResizing = useRef(false)
   const isVerticalResizing = useRef(false)
   const startX = useRef(0)
   const startY = useRef(0)
   const startWidth = useRef(0)
   const startHeight = useRef(0)
+
+  // Function to update individual participant volume
+  const updateParticipantVolume = (participantIdentity, volume) => {
+    setParticipantVolumes(prev => new Map(prev.set(participantIdentity, volume)))
+    
+    // Find the participant and update their audio track volume
+    const participant = allParticipants.find(p => p.identity === participantIdentity)
+    if (participant) {
+      // Get audio tracks for this participant
+      const audioTracks = Array.from(participant.audioTrackPublications.values())
+      audioTracks.forEach(publication => {
+        if (publication.track && publication.track.setVolume) {
+          publication.track.setVolume(volume)
+          console.log(`🔊 Set volume ${volume} for participant ${participantIdentity}`)
+        }
+      })
+    }
+  }
+
+  // Get volume for a participant (default to 1.0)
+  const getParticipantVolume = (participantIdentity) => {
+    return participantVolumes.get(participantIdentity) ?? 1.0
+  }
+
+  // Update streambot volume
+  useEffect(() => {
+    // Find streambot participant
+    const streambot = allParticipants.find(p => p.identity === 'streambot')
+    if (streambot) {
+      // Get audio tracks for streambot
+      const audioTracks = Array.from(streambot.audioTrackPublications.values())
+      audioTracks.forEach(publication => {
+        if (publication.track && publication.track.setVolume) {
+          publication.track.setVolume(streambotVolume)
+          console.log(`🎬 Set streambot volume to ${streambotVolume}`)
+        }
+      })
+    }
+  }, [streambotVolume, allParticipants])
 
   // Set metadata when signal is connected and participant is ready
   useEffect(() => {
@@ -326,16 +366,16 @@ function RoomContent({ displayName, url, token, volume, setVolume }) {
           <ControlBar controls={{ leave: true, holdToTalk: false }} />
           <div style={{ flex: 1 }} />
           <div className="lk-control-bar" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {/* Volume Slider */}
+            {/* Streambot Volume Slider */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.875rem', color: 'var(--lk-control-fg)' }}>🔊</span>
+              <span style={{ fontSize: '0.875rem', color: 'var(--lk-control-fg)' }}>🎬</span>
               <input
                 type="range"
                 min="0"
                 max="1"
                 step="0.1"
-                value={volume}
-                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                value={streambotVolume}
+                onChange={(e) => setStreambotVolume(parseFloat(e.target.value))}
                 style={{
                   width: '80px',
                   height: '4px',
@@ -344,9 +384,10 @@ function RoomContent({ displayName, url, token, volume, setVolume }) {
                   outline: 'none',
                   cursor: 'pointer'
                 }}
+                title="Movie volume"
               />
               <span style={{ fontSize: '0.75rem', color: 'var(--lk-control-fg)', minWidth: '30px' }}>
-                {Math.round(volume * 100)}%
+                {Math.round(streambotVolume * 100)}%
               </span>
             </div>
             
@@ -445,9 +486,9 @@ function RoomContent({ displayName, url, token, volume, setVolume }) {
                       </div>
                       <div id="controls">
                         <div class="volume-control">
-                          <span>🔊</span>
-                          <input type="range" min="0" max="1" step="0.1" value="${volume}" class="volume-slider" id="volume-slider">
-                          <span class="volume-percentage" id="volume-percentage">${Math.round(volume * 100)}%</span>
+                          <span>🎬</span>
+                          <input type="range" min="0" max="1" step="0.1" value="${streambotVolume}" class="volume-slider" id="volume-slider">
+                          <span class="volume-percentage" id="volume-percentage">${Math.round(streambotVolume * 100)}%</span>
                         </div>
                         <button onclick="document.getElementById('video-container').requestFullscreen()">
                           ⛶ Fullscreen
@@ -465,7 +506,7 @@ function RoomContent({ displayName, url, token, volume, setVolume }) {
                           // Send volume change to parent window
                           if (window.opener) {
                             window.opener.postMessage({
-                              type: 'VOLUME_CHANGE',
+                              type: 'STREAMBOT_VOLUME_CHANGE',
                               volume: volume
                             }, '*');
                           }
@@ -567,9 +608,33 @@ function RoomContent({ displayName, url, token, volume, setVolume }) {
               marginBottom: '2px',
               background: 'rgba(31, 140, 249, 0.2)', // Subtle blue for local user
               fontSize: '14px',
-              color: '#fff'
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
             }}>
-              {getDisplayName(localParticipant) || 'You'} (You)
+              <span style={{ flex: '0 0 75%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {getDisplayName(localParticipant) || 'You'} (You)
+              </span>
+              <div style={{ flex: '0 0 25%', maxWidth: '400px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
+                <span style={{ fontSize: '8px' }}>🔊</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={getParticipantVolume(localParticipant?.identity || 'local')}
+                  onChange={(e) => updateParticipantVolume(localParticipant?.identity || 'local', parseFloat(e.target.value))}
+                  style={{
+                    width: '100%',
+                    height: '2px',
+                    background: 'rgba(255, 255, 255, 0.3)',
+                    borderRadius: '1px',
+                    outline: 'none',
+                    cursor: 'pointer'
+                  }}
+                />
+              </div>
             </div>
             {/* Remote participants */}
             {participants
@@ -581,9 +646,33 @@ function RoomContent({ displayName, url, token, volume, setVolume }) {
                   marginBottom: '2px',
                   background: 'rgba(255, 255, 255, 0.05)', // Subtle dark background
                   fontSize: '14px',
-                  color: '#fff'
+                  color: '#fff',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px'
                 }}>
-                  {getDisplayName(participant)}
+                  <span style={{ flex: '0 0 75%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {getDisplayName(participant)}
+                  </span>
+                  <div style={{ flex: '0 0 25%', maxWidth: '400px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
+                    <span style={{ fontSize: '8px' }}>🔊</span>
+                    <input
+                      type="range"
+                      min="0"
+                      max="1"
+                      step="0.1"
+                      value={getParticipantVolume(participant.identity)}
+                      onChange={(e) => updateParticipantVolume(participant.identity, parseFloat(e.target.value))}
+                      style={{
+                        width: '100%',
+                        height: '2px',
+                        background: 'rgba(255, 255, 255, 0.3)',
+                        borderRadius: '1px',
+                        outline: 'none',
+                        cursor: 'pointer'
+                      }}
+                    />
+                  </div>
                 </div>
               ))}
           </div>
