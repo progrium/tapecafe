@@ -36,6 +36,19 @@ function getDisplayName(participant) {
 
 function VideoRoom({ url, token, displayName, onDisconnect }) {
   const roomName = getRoomFromToken(token)
+  const [volume, setVolume] = useState(1.0)
+
+  // Listen for volume changes from popup window
+  useEffect(() => {
+    const handleMessage = (event) => {
+      if (event.data.type === 'VOLUME_CHANGE') {
+        setVolume(event.data.volume)
+      }
+    }
+
+    window.addEventListener('message', handleMessage)
+    return () => window.removeEventListener('message', handleMessage)
+  }, [])
 
   const handleConnected = async (room) => {
     console.log('✅ Successfully connected to room:', room?.name || roomName || 'Unknown')
@@ -82,14 +95,14 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
         onDisconnected={handleDisconnected}
         onError={handleError}
       >
-        <RoomContent displayName={displayName} url={url} token={token} />
-        <RoomAudioRenderer />
+        <RoomContent displayName={displayName} url={url} token={token} volume={volume} setVolume={setVolume} />
+        <RoomAudioRenderer volume={volume} />
       </LiveKitRoom>
     </div>
   )
 }
 
-function RoomContent({ displayName, url, token }) {
+function RoomContent({ displayName, url, token, volume, setVolume }) {
   const { localParticipant } = useLocalParticipant()
   const allParticipants = useParticipants()
   const room = useRoomContext()
@@ -312,7 +325,31 @@ function RoomContent({ displayName, url, token }) {
         }}>
           <ControlBar controls={{ leave: true, holdToTalk: false }} />
           <div style={{ flex: 1 }} />
-          <div className="lk-control-bar" style={{ display: 'flex', gap: '0.5rem' }}>
+          <div className="lk-control-bar" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {/* Volume Slider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <span style={{ fontSize: '0.875rem', color: 'var(--lk-control-fg)' }}>🔊</span>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={volume}
+                onChange={(e) => setVolume(parseFloat(e.target.value))}
+                style={{
+                  width: '80px',
+                  height: '4px',
+                  background: 'var(--lk-control-bg)',
+                  borderRadius: '2px',
+                  outline: 'none',
+                  cursor: 'pointer'
+                }}
+              />
+              <span style={{ fontSize: '0.75rem', color: 'var(--lk-control-fg)', minWidth: '30px' }}>
+                {Math.round(volume * 100)}%
+              </span>
+            </div>
+            
             <button
               onClick={() => {
                 // Find the streambot video element
@@ -367,6 +404,7 @@ function RoomContent({ displayName, url, token }) {
                           display: flex;
                           align-items: center;
                           justify-content: center;
+                          gap: 16px;
                           border-top: 1px solid rgba(255, 255, 255, 0.1);
                         }
                         button {
@@ -381,6 +419,24 @@ function RoomContent({ displayName, url, token }) {
                         button:hover {
                           background: rgba(255, 255, 255, 0.2);
                         }
+                        .volume-control {
+                          display: flex;
+                          align-items: center;
+                          gap: 8px;
+                          color: white;
+                        }
+                        .volume-slider {
+                          width: 80px;
+                          height: 4px;
+                          background: rgba(255, 255, 255, 0.3);
+                          border-radius: 2px;
+                          outline: none;
+                          cursor: pointer;
+                        }
+                        .volume-percentage {
+                          font-size: 12px;
+                          min-width: 30px;
+                        }
                       </style>
                     </head>
                     <body>
@@ -388,10 +444,33 @@ function RoomContent({ displayName, url, token }) {
                         <video id="popout-video" autoplay muted playsinline></video>
                       </div>
                       <div id="controls">
+                        <div class="volume-control">
+                          <span>🔊</span>
+                          <input type="range" min="0" max="1" step="0.1" value="${volume}" class="volume-slider" id="volume-slider">
+                          <span class="volume-percentage" id="volume-percentage">${Math.round(volume * 100)}%</span>
+                        </div>
                         <button onclick="document.getElementById('video-container').requestFullscreen()">
                           ⛶ Fullscreen
                         </button>
                       </div>
+                      <script>
+                        const volumeSlider = document.getElementById('volume-slider');
+                        const volumePercentage = document.getElementById('volume-percentage');
+                        const video = document.getElementById('popout-video');
+                        
+                        volumeSlider.addEventListener('input', function() {
+                          const volume = parseFloat(this.value);
+                          volumePercentage.textContent = Math.round(volume * 100) + '%';
+                          
+                          // Send volume change to parent window
+                          if (window.opener) {
+                            window.opener.postMessage({
+                              type: 'VOLUME_CHANGE',
+                              volume: volume
+                            }, '*');
+                          }
+                        });
+                      </script>
                     </body>
                     </html>
                   `)
