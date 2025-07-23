@@ -24,7 +24,11 @@ export function Settings({ onClose }) {
     try {
       const metadata = JSON.stringify({ displayName: displayName.trim() })
       await room.localParticipant.setMetadata(metadata)
-      console.log('✏️ Updated display name to:', displayName.trim())
+      console.log('✏️ Settings: Updated display name to:', displayName.trim())
+      
+      // Manually trigger metadata change event for ParticipantNamesContext
+      room.emit('participantMetadataChanged', metadata, room.localParticipant)
+      console.log('✏️ Settings: Manually triggered participantMetadataChanged event')
       
       // Also save to localStorage for future sessions
       localStorage.setItem('displayName', displayName.trim())

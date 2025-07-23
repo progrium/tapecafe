@@ -175,8 +175,8 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
         console.log('✏️ Successfully set display name metadata:', displayName)
 
         // Manually trigger metadata change event since local participant doesn't always emit it
-        room.emit('participantMetadataChanged', room.localParticipant)
-        console.log('🔄 Manually triggered participantMetadataChanged event')
+        room.emit('participantMetadataChanged', metadata, room.localParticipant)
+        console.log('🔄 Manually triggered participantMetadataChanged event with metadata:', metadata)
       } catch (error) {
         console.error('Failed to set participant metadata:', error)
       }

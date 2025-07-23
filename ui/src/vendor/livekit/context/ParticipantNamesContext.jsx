@@ -42,16 +42,23 @@ export function ParticipantNamesProvider({ children }) {
     }
 
     // Listen for participant metadata changes
-    const handleParticipantMetadataChanged = (participant) => {
-      console.log('Metadata changed for participant:', participant.identity, participant.metadata)
-      if (participant && participant.identity) {
+    const handleParticipantMetadataChanged = (metadata, participant) => {
+      // Handle both event formats: (participant) and (metadata, participant)
+      const actualParticipant = participant || metadata
+      const actualMetadata = typeof metadata === 'string' ? metadata : actualParticipant?.metadata
+      
+      console.log('🔄 ParticipantNamesContext: Metadata changed for participant:', actualParticipant?.identity, actualMetadata)
+      if (actualParticipant && actualParticipant.identity) {
         setParticipantNames(prev => {
           const newMap = new Map(prev)
-          newMap.set(participant.identity, {
-            identity: participant.identity,
-            name: participant.name || participant.identity,
-            metadata: participant.metadata
-          })
+          const newParticipantData = {
+            identity: actualParticipant.identity,
+            name: actualParticipant.name || actualParticipant.identity,
+            metadata: actualMetadata || actualParticipant.metadata
+          }
+          newMap.set(actualParticipant.identity, newParticipantData)
+          console.log('🔄 ParticipantNamesContext: Updated participant data:', newParticipantData)
+          console.log('🔄 ParticipantNamesContext: Full participants map:', Array.from(newMap.entries()))
           return newMap
         })
       }
@@ -91,7 +98,8 @@ export function ParticipantNamesProvider({ children }) {
     
     // Also listen for local participant metadata changes
     const handleLocalMetadataChanged = (metadata) => {
-      handleParticipantMetadataChanged(room.localParticipant)
+      console.log('🔄 ParticipantNamesContext: Local metadata changed:', metadata)
+      handleParticipantMetadataChanged(metadata, room.localParticipant)
     }
     
     if (room.localParticipant) {
@@ -112,13 +120,17 @@ export function ParticipantNamesProvider({ children }) {
 
   const getParticipantDisplayName = (identity) => {
     const participant = participantNames.get(identity)
-    if (!participant) return identity
+    if (!participant) {
+      console.log('🔍 ParticipantNamesContext: No participant found for identity:', identity)
+      return identity
+    }
 
     // Try to extract display name from metadata first
     try {
       if (participant.metadata) {
         const metadata = JSON.parse(participant.metadata)
         if (metadata.displayName) {
+          console.log('🔍 ParticipantNamesContext: Found display name:', metadata.displayName, 'for identity:', identity)
           return metadata.displayName
         }
       }
@@ -126,6 +138,7 @@ export function ParticipantNamesProvider({ children }) {
       console.log('Error parsing metadata in context:', error)
     }
 
+    console.log('🔍 ParticipantNamesContext: Using fallback name:', participant.name || identity, 'for identity:', identity)
     return participant.name || identity
   }
 
