@@ -120,7 +120,7 @@ func streamFile(filename string, seekMs int, output string, progressChan chan ma
 	return cmd, nil
 }
 
-func durationMs(filename string) (int, error) {
+func fileDurationMs(filename string) (int, error) {
 	format, err := ffprobeFormat(filename)
 	if err != nil {
 		return 0, err
@@ -163,7 +163,7 @@ func ffprobeFormat(filename string) (map[string]string, error) {
 	return formatMap, nil
 }
 
-// formatTimeMs takes milliseconds and returns a string in 00:ss, mm:ss, or hh:mm:ss format.
+// formatTimeMs takes milliseconds and returns a string in mm:ss or hh:mm:ss format.
 func formatTimeMs(ms int) string {
 	seconds := ms / 1000
 	h := seconds / 3600
@@ -172,19 +172,26 @@ func formatTimeMs(ms int) string {
 
 	if h > 0 {
 		return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
-	} else if m > 0 {
-		return fmt.Sprintf("%02d:%02d", m, s)
 	}
-	return fmt.Sprintf("00:%02d", s)
+	return fmt.Sprintf("%02d:%02d", m, s)
 }
 
 // parseTimeToMs parses a string like "00:00:00.166833" (HH:MM:SS.ssssss) into milliseconds.
 func parseTimeToMs(timeStr string) (int, error) {
 	var h, m, s int
 	var frac float64
-	// Try to parse with fractional seconds
-	count, err := fmt.Sscanf(timeStr, "%d:%d:%d.%f", &h, &m, &s, &frac)
-	if err != nil || count < 3 {
+	var err error
+	colons := strings.Count(timeStr, ":")
+	if colons == 1 {
+		_, err = fmt.Sscanf(timeStr, "%d:%d", &m, &s)
+	} else if colons == 2 {
+		if strings.Count(timeStr, ".") == 1 {
+			_, err = fmt.Sscanf(timeStr, "%d:%d:%d.%f", &h, &m, &s, &frac)
+		} else {
+			_, err = fmt.Sscanf(timeStr, "%d:%d:%d", &h, &m, &s)
+		}
+	}
+	if err != nil {
 		return 0, fmt.Errorf("invalid time format: %s", timeStr)
 	}
 	ms := int(frac/1000) + (h*3600+m*60+s)*1000

@@ -8,7 +8,11 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
+	"os/exec"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"golang.org/x/net/websocket"
 	"tractor.dev/toolkit-go/engine/cli"
@@ -29,6 +33,14 @@ func castCmd() *cli.Command {
 			var filename string
 			if len(args) > 1 {
 				filename = args[1]
+				if _, err := os.Stat(filename); os.IsNotExist(err) {
+					log.Fatal("file does not exist:", filename)
+				}
+				durationMs, err := fileDurationMs(filename)
+				if err != nil {
+					log.Fatal("file duration:", err)
+				}
+				fmt.Println("FILE DURATION:", formatTimeMs(durationMs))
 			}
 
 			settings, err := fetchSettings(*u)
@@ -49,7 +61,122 @@ func castCmd() *cli.Command {
 			// })
 			// go startStream()
 
-			go monitorChat(*u, originURL, filename, settings["ingress_key"].(string))
+			currentTime := "00:00"
+			var cmd *exec.Cmd
+			rtmpURL := "rtmp://localhost:1935/live/" + settings["ingress_key"].(string)
+			slashPlaySeek := func(args []string) error {
+				startTime := currentTime
+				if len(args) > 0 {
+					startTime = args[0]
+				}
+				startMs, err := parseTimeToMs(startTime)
+				if err != nil {
+					return err
+				}
+
+				if cmd != nil {
+					log.Println("killing ffmpeg process at", currentTime)
+					cmd.Process.Kill()
+					cmd = nil
+				}
+
+				log.Println("starting ffmpeg process at", startTime)
+				progressChan := make(chan map[string]string)
+				cmd, err = streamFile(filename, startMs, rtmpURL, progressChan)
+				if err != nil {
+					return err
+				}
+				go func() {
+					for progress := range progressChan {
+						timeMs, err := parseTimeToMs(progress["out_time"])
+						if err != nil {
+							log.Fatal("parse time:", err)
+						}
+						// log.Println("progress:", progress["out_time"])
+						currentTime = formatTimeMs(startMs + timeMs)
+					}
+				}()
+
+				return nil
+			}
+			slashPause := func(args []string) error {
+				if cmd != nil {
+					log.Println("killing ffmpeg process at", currentTime)
+					cmd.Process.Kill()
+					cmd = nil
+				}
+				return nil
+			}
+			slashBack := func(args []string) error {
+				slashPause(nil)
+				backTime := "00:10"
+				if len(args) > 0 {
+					if strings.Contains(args[0], ":") {
+						backTime = args[0]
+					} else {
+						backTime = "00:" + args[0]
+					}
+				}
+				backMs, err := parseTimeToMs(backTime)
+				if err != nil {
+					return err
+				}
+				currentMs, err := parseTimeToMs(currentTime)
+				if err != nil {
+					return err
+				}
+				currentMs -= backMs
+				currentTime = formatTimeMs(currentMs)
+				log.Println("seeking back to", currentTime)
+				slashPlaySeek(nil)
+				return nil
+			}
+			slashForward := func(args []string) error {
+				slashPause(nil)
+				backTime := "00:10"
+				if len(args) > 0 {
+					if strings.Contains(args[0], ":") {
+						backTime = args[0]
+					} else {
+						backTime = "00:" + args[0]
+					}
+				}
+				backMs, err := parseTimeToMs(backTime)
+				if err != nil {
+					return err
+				}
+				currentMs, err := parseTimeToMs(currentTime)
+				if err != nil {
+					return err
+				}
+				currentMs += backMs
+				currentTime = formatTimeMs(currentMs)
+				log.Println("seeking forward to", currentTime)
+				slashPlaySeek(nil)
+				return nil
+			}
+			cmds := map[string]func([]string) error{
+				"/play":    slashPlaySeek,
+				"/seek":    slashPlaySeek,
+				"/pause":   slashPause,
+				"/back":    slashBack,
+				"/fwd":     slashForward,
+				"/forward": slashForward,
+			}
+
+			go monitorChat(*u, originURL, cmds)
+
+			// Add signal handling for SIGINT
+			sigChan := make(chan os.Signal, 1)
+			signal.Notify(sigChan, os.Interrupt, syscall.SIGINT)
+			go func() {
+				<-sigChan
+				if cmd != nil {
+					log.Println("Caught SIGINT, killing ffmpeg process...")
+					cmd.Process.Kill()
+				}
+				os.Exit(0)
+			}()
 
 			for {
 				conn, err := l.Accept()
@@ -79,7 +206,7 @@ func castCmd() *cli.Command {
 	return cmd
 }
 
-func monitorChat(u url.URL, origin string, filename string, streamKey string) {
+func monitorChat(u url.URL, origin string, cmds map[string]func([]string) error) {
 	u.Path = "/chat"
 	conn, err := websocket.Dial(u.String(), "", origin)
 	if err != nil {
@@ -89,36 +216,24 @@ func monitorChat(u url.URL, origin string, filename string, streamKey string) {
 	defer conn.Close()
 
 	for {
-		var msg string
-		if err := websocket.Message.Receive(conn, &msg); err != nil {
+		var data []byte
+		if err := websocket.Message.Receive(conn, &data); err != nil {
 			log.Println("chat:", err)
 			return
 		}
+		var m map[string]any
+		if err := json.Unmarshal(data, &m); err != nil {
+			log.Println("chat:", err)
+			continue
+		}
+		msg := m["message"].(string)
 		log.Println("CHAT:", msg)
 
-		if filename != "" && strings.Index(msg, "/play") != -1 {
-			progressChan := make(chan map[string]string)
-			startMs := 0
-
-			_, err := streamFile(filename, startMs, "rtmp://localhost:1935/live/"+streamKey, progressChan)
-			if err != nil {
-				log.Fatal("stream file:", err)
+		args := strings.Split(msg, " ")
+		if cmd, ok := cmds[args[0]]; ok {
+			if err := cmd(args[1:]); err != nil {
+				log.Println("chat command:", args, err)
 			}
-			go func() {
-				for progress := range progressChan {
-					timeMs, err := parseTimeToMs(progress["out_time"])
-					if err != nil {
-						log.Fatal("parse time:", err)
-					}
-					t := formatTimeMs(startMs + timeMs)
-					fmt.Println("TIME:", t)
-					// if t == "00:05" {
-					// 	cmd.Process.Kill()
-					// 	return
-					// }
-				}
-			}()
-
 		}
 
 		// if video, ok := detectYouTubeURL(m["message"].(string)); ok {
