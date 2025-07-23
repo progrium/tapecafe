@@ -49,3 +49,17 @@ body {
 .lk-chat-form-button {
   flex-shrink: 0 !important;
 }
+
+/* Make settings modal fit content instead of 50vh/50vw */
+.lk-settings-menu-modal {
+  min-width: auto !important;
+  min-height: auto !important;
+  width: fit-content !important;
+  height: fit-content !important;
+  overflow: visible !important; /* Allow dropdowns to overflow the modal */
+}
+
+/* Ensure device menu dropdowns can extend beyond modal bounds */
+.lk-device-menu {
+  z-index: 9999 !important; /* Higher z-index to appear above modal */
+}

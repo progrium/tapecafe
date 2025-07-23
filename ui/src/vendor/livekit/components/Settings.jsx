@@ -40,8 +40,9 @@ export function Settings({ onClose }) {
 
   return (
     <div style={{ 
-      padding: '1rem', 
-      width: '300px',
+      padding: '0.75rem', 
+      width: 'fit-content',
+      minWidth: '250px',
       backgroundColor: 'var(--lk-bg2)',
       color: 'var(--lk-fg)',
       borderRadius: 'var(--lk-border-radius)'
@@ -50,7 +51,7 @@ export function Settings({ onClose }) {
         display: 'flex', 
         justifyContent: 'space-between', 
         alignItems: 'center',
-        marginBottom: '1rem'
+        marginBottom: '0.75rem'
       }}>
         <h3 style={{ 
           margin: 0, 
@@ -77,7 +78,7 @@ export function Settings({ onClose }) {
       </div>
       
       {/* Display Name Section */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1rem' }}>
         <h4 style={{ 
           margin: '0 0 0.5rem 0', 
           fontSize: '0.9rem',
@@ -121,7 +122,7 @@ export function Settings({ onClose }) {
       </div>
 
       {/* Audio Device Section */}
-      <div style={{ marginBottom: '1.5rem' }}>
+      <div style={{ marginBottom: '1rem' }}>
         <h4 style={{ 
           margin: '0 0 0.5rem 0', 
           fontSize: '0.9rem',
@@ -133,7 +134,7 @@ export function Settings({ onClose }) {
       </div>
 
       {/* Video Device Section */}
-      <div style={{ marginBottom: '1rem' }}>
+      <div style={{ marginBottom: '0.5rem' }}>
         <h4 style={{ 
           margin: '0 0 0.5rem 0', 
           fontSize: '0.9rem',
