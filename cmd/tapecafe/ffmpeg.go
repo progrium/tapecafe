@@ -65,6 +65,9 @@ func streamFile(filename string, seekMs int, output string, progressChan chan ma
 		"-i", filename,
 		"-c:v", "libx264",
 		"-c:a", "aac",
+		"-b:a", "160k",
+		"-b:v", "3M",
+		"-preset", "veryfast",
 		"-f", "flv",
 		output)
 	cmd.Stderr = os.Stderr
