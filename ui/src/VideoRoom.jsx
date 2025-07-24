@@ -8,6 +8,7 @@ import {
   useLocalParticipant,
   useParticipants,
   useRoomContext,
+  DisconnectButton,
 } from '@livekit/components-react'
 import { Chat, formatChatMessageLinks, Settings, ControlBar, HoldToTalk } from './vendor/livekit'
 import { CustomParticipantTile } from './components/CustomParticipantTile'
@@ -361,11 +362,22 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
           alignItems: 'center',
           gap: '0.5rem',
           flexShrink: 0,
-          borderTop: '1px solid rgba(255, 255, 255, 0.1)'
+          borderTop: '1px solid rgba(255, 255, 255, 0.1)',
+          justifyContent: 'space-between',
+          padding: '12px',
         }}>
-          <ControlBar controls={{ leave: true, holdToTalk: false }} />
-          <div style={{ flex: 1 }} />
-          <div className="lk-control-bar" style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          {/* Left section - Leave button */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <DisconnectButton>
+              Leave
+            </DisconnectButton>
+          </div>
+
+          {/* Center section - Transport controls */}
+          <ControlBar controls={{ leave: false, holdToTalk: false, playback: true }} />
+
+          {/* Right section - Volume and popout */}
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
             {/* Streambot Volume Slider */}
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <span style={{ fontSize: '0.875rem', color: 'var(--lk-control-fg)' }}>🎬</span>

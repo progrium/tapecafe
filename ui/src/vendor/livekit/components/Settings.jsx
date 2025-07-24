@@ -25,11 +25,11 @@ export function Settings({ onClose }) {
       const metadata = JSON.stringify({ displayName: displayName.trim() })
       await room.localParticipant.setMetadata(metadata)
       console.log('✏️ Settings: Updated display name to:', displayName.trim())
-      
+
       // Manually trigger metadata change event for ParticipantNamesContext
       room.emit('participantMetadataChanged', metadata, room.localParticipant)
       console.log('✏️ Settings: Manually triggered participantMetadataChanged event')
-      
+
       // Also save to localStorage for future sessions
       localStorage.setItem('displayName', displayName.trim())
     } catch (error) {
@@ -39,22 +39,22 @@ export function Settings({ onClose }) {
   }
 
   return (
-    <div style={{ 
-      padding: '0.75rem', 
+    <div style={{
+      padding: '0.75rem',
       width: 'fit-content',
       minWidth: '250px',
       backgroundColor: 'var(--lk-bg2)',
       color: 'var(--lk-fg)',
       borderRadius: 'var(--lk-border-radius)'
     }}>
-      <div style={{ 
-        display: 'flex', 
-        justifyContent: 'space-between', 
+      <div style={{
+        display: 'flex',
+        justifyContent: 'space-between',
         alignItems: 'center',
-        marginBottom: '0.75rem'
+        marginBottom: '0.75rem',
       }}>
-        <h3 style={{ 
-          margin: 0, 
+        <h3 style={{
+          margin: 0,
           fontSize: '1.2rem',
           color: 'var(--lk-fg)'
         }}>
@@ -76,11 +76,11 @@ export function Settings({ onClose }) {
           </button>
         )}
       </div>
-      
+
       {/* Display Name Section */}
       <div style={{ marginBottom: '1rem' }}>
-        <h4 style={{ 
-          margin: '0 0 0.5rem 0', 
+        <h4 style={{
+          margin: '0 0 0.5rem 0',
           fontSize: '0.9rem',
           color: 'var(--lk-fg3)'
         }}>
@@ -123,8 +123,8 @@ export function Settings({ onClose }) {
 
       {/* Audio Device Section */}
       <div style={{ marginBottom: '1rem' }}>
-        <h4 style={{ 
-          margin: '0 0 0.5rem 0', 
+        <h4 style={{
+          margin: '0 0 0.5rem 0',
           fontSize: '0.9rem',
           color: 'var(--lk-fg3)'
         }}>
@@ -135,8 +135,8 @@ export function Settings({ onClose }) {
 
       {/* Video Device Section */}
       <div style={{ marginBottom: '0.5rem' }}>
-        <h4 style={{ 
-          margin: '0 0 0.5rem 0', 
+        <h4 style={{
+          margin: '0 0 0.5rem 0',
           fontSize: '0.9rem',
           color: 'var(--lk-fg3)'
         }}>
