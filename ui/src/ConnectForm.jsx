@@ -12,6 +12,7 @@ function ConnectForm({ onConnect }) {
   const [displayName, setDisplayName] = useState(() =>
     localStorage.getItem('displayName') || ''
   )
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [devices, setDevices] = useState({ cameras: [], microphones: [] })
   const [selectedCamera, setSelectedCamera] = useState(() =>
     localStorage.getItem('selectedCamera') || ''
@@ -252,41 +253,81 @@ function ConnectForm({ onConnect }) {
                 }}
               />
             </div>
+
+            {/* Advanced Settings Dropdown */}
             <div style={{ marginBottom: '15px' }}>
-              <label htmlFor="url">LiveKit URL:</label>
-              <input
-                type="text"
-                id="url"
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-                placeholder="wss://your-livekit-server.com"
-                required
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
                 style={{
                   width: '100%',
-                  padding: '8px',
-                  marginTop: '5px',
-                  border: '1px solid #ccc',
-                  borderRadius: '4px'
+                  padding: '10px',
+                  backgroundColor: '#f5f5f5',
+                  border: '1px solid #ddd',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  fontSize: '14px',
+                  color: '#666'
                 }}
-              />
-            </div>
-            <div style={{ marginBottom: '15px' }}>
-              <label htmlFor="token">Token:</label>
-              <input
-                type="text"
-                id="token"
-                value={token}
-                onChange={(e) => setToken(e.target.value)}
-                placeholder="Your access token"
-                required
-                style={{
-                  width: '100%',
-                  padding: '8px',
-                  marginTop: '5px',
-                  border: '1px solid #ccc',
+              >
+                <span>Advanced Settings</span>
+                <span style={{
+                  transform: showAdvanced ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s'
+                }}>
+                  ▼
+                </span>
+              </button>
+
+              {showAdvanced && (
+                <div style={{
+                  marginTop: '10px',
+                  padding: '15px',
+                  backgroundColor: '#fafafa',
+                  border: '1px solid #e0e0e0',
                   borderRadius: '4px'
-                }}
-              />
+                }}>
+                  <div style={{ marginBottom: '15px' }}>
+                    <label htmlFor="url">WebSockets URL:</label>
+                    <input
+                      type="text"
+                      id="url"
+                      value={url}
+                      onChange={(e) => setUrl(e.target.value)}
+                      placeholder="wss://your-server.com"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        marginTop: '5px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
+                  <div style={{ marginBottom: '0' }}>
+                    <label htmlFor="token">Token:</label>
+                    <input
+                      type="text"
+                      id="token"
+                      value={token}
+                      onChange={(e) => setToken(e.target.value)}
+                      placeholder="Your access token"
+                      required
+                      style={{
+                        width: '100%',
+                        padding: '8px',
+                        marginTop: '5px',
+                        border: '1px solid #ccc',
+                        borderRadius: '4px'
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
             {/* Permission Warning */}
             {!hasPermissions && (
