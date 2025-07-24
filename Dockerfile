@@ -16,10 +16,11 @@ RUN CGO_ENABLED=1 go build -o /livekit/ingress-server ./cmd/server
 
 FROM golang:1.24.5-alpine AS tapecafe-builder
 WORKDIR /app
-RUN apk add --no-cache git
+RUN apk add --no-cache git nodejs npm
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+RUN cd ui && npm install && npm run build
 RUN CGO_ENABLED=0 go build -o tapecafe ./cmd/tapecafe
 
 
