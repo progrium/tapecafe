@@ -1,11 +1,11 @@
 package main
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
@@ -19,6 +19,7 @@ import (
 	lkp "github.com/livekit/protocol/livekit"
 	lksdk "github.com/livekit/server-sdk-go"
 	lksdk2 "github.com/livekit/server-sdk-go/v2"
+	"github.com/progrium/tapecafe/ui"
 	"github.com/rs/xid"
 	"golang.ngrok.com/ngrok"
 	ngrokconfig "golang.ngrok.com/ngrok/config"
@@ -162,6 +163,17 @@ func serveChat(conn *websocket.Conn) {
 }
 
 func serveParticipate(w http.ResponseWriter, r *http.Request) {
+	sub, err := fs.Sub(ui.Dir, "dist")
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	if strings.HasPrefix(r.URL.Path, "/assets") {
+		http.FileServerFS(sub).ServeHTTP(w, r)
+		return
+	}
+
 	if r.URL.Path == "/" {
 		md := true
 		at := auth.NewAccessToken("devkey", "secret")
@@ -180,18 +192,16 @@ func serveParticipate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		//http.Redirect(w, r, fmt.Sprintf("/%s", token), http.StatusTemporaryRedirect)
+		http.Redirect(w, r, fmt.Sprintf("/%s?liveKitUrl=%s&token=%s", token, lkURL, token), http.StatusTemporaryRedirect)
 
-		meetURL := cmp.Or(os.Getenv("MEET_URL"), "https://meet.livekit.io/custom")
-		meetURL = fmt.Sprintf("%s?liveKitUrl=%s&token=%s", meetURL, lkURL, token)
-		log.Println("Redirecting to:", meetURL)
-		http.Redirect(w, r, meetURL, http.StatusTemporaryRedirect)
+		// meetURL = fmt.Sprintf("%s?liveKitUrl=%s&token=%s", meetURL, lkURL, token)
+		// meetURL := cmp.Or(os.Getenv("MEET_URL"), "https://meet.livekit.io/custom")
+		// log.Println("Redirecting to:", meetURL)
+		// http.Redirect(w, r, meetURL, http.StatusTemporaryRedirect)
 		return
 	}
 
-	token := strings.TrimPrefix(r.URL.Path, "/")
-	fmt.Fprintln(w, token)
-
+	http.ServeFileFS(w, r, sub, "index.html")
 }
 
 func publicURL(l net.Listener) string {
