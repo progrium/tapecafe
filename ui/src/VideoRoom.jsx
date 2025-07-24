@@ -117,6 +117,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
   const [showSettings, setShowSettings] = useState(false)
   const [isVideoPoppedOut, setIsVideoPoppedOut] = useState(false)
   const [participantVolumes, setParticipantVolumes] = useState(new Map())
+  const chatRef = useRef(null)
   const isResizing = useRef(false)
   const isVerticalResizing = useRef(false)
   const startX = useRef(0)
@@ -374,7 +375,10 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
           </div>
 
           {/* Center section - Transport controls */}
-          <ControlBar controls={{ leave: false, holdToTalk: false, playback: true }} />
+          <ControlBar 
+            controls={{ leave: false, holdToTalk: false, playback: true }} 
+            onSendMessage={(message) => chatRef.current?.send(message)}
+          />
 
           {/* Right section - Volume and popout */}
           <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -707,6 +711,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
         {/* Chat Section */}
         <div style={{ flex: 1, overflow: 'hidden' }}>
           <Chat
+            ref={chatRef}
             style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}
             messageFormatter={formatChatMessageLinks}
           />

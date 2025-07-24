@@ -1,17 +1,17 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react'
 import { useChat } from '../hooks/useChat'
 import { ChatEntry } from './ChatEntry'
 import { formatChatMessageLinks } from './ChatEntry'
 import { ParticipantNamesProvider } from '../context/ParticipantNamesContext'
 
-export function Chat({
+export const Chat = forwardRef(function Chat({
   messageFormatter,
   messageDecoder,
   messageEncoder,
   channelTopic,
   children,
   ...props
-}) {
+}, ref) {
   const ulRef = useRef(null)
   const inputRef = useRef(null)
 
@@ -20,6 +20,11 @@ export function Chat({
   }, [messageDecoder, messageEncoder, channelTopic])
 
   const { chatMessages, send, isSending } = useChat(chatOptions)
+
+  // Expose the send function via ref
+  useImperativeHandle(ref, () => ({
+    send
+  }), [send])
 
   async function handleSubmit(event) {
     event.preventDefault()
@@ -87,6 +92,6 @@ export function Chat({
       </div>
     </ParticipantNamesProvider>
   )
-}
+})
 
 export { formatChatMessageLinks }

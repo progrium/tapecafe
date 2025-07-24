@@ -7,29 +7,34 @@ export function ControlBar({
   controls = {
     playback: false
   },
+  onSendMessage,
   className,
   ...props
 }) {
   const showPlayback = controls.playback;
 
   const handleBackward = () => {
-    // TODO: Implement 15 second backward functionality
-    console.log('Backward 15 seconds');
+    if (onSendMessage) {
+      onSendMessage('/back 15');
+    }
   };
 
   const handlePlay = () => {
-    // TODO: Implement play functionality
-    console.log('Play');
+    if (onSendMessage) {
+      onSendMessage('/play');
+    }
   };
 
   const handlePause = () => {
-    // TODO: Implement pause functionality
-    console.log('Pause');
+    if (onSendMessage) {
+      onSendMessage('/pause');
+    }
   };
 
   const handleForward = () => {
-    // TODO: Implement 15 second forward functionality
-    console.log('Forward 15 seconds');
+    if (onSendMessage) {
+      onSendMessage('/fwd 15');
+    }
   };
 
   // Only render transport controls if playback is enabled
