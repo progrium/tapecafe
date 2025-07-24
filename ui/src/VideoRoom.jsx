@@ -346,14 +346,19 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             bottom: 0,
             height: isVideoPoppedOut ? '100%' : '160px', // Increased height to accommodate names
             pointerEvents: 'auto', // Ensure carousel controls remain interactive
-            overflow: 'visible' // Allow names to extend beyond container
+            overflow: 'visible', // Allow names to extend beyond container
+            display: 'flex',
+            justifyContent: 'center'
           }}>
-            <CarouselLayout tracks={carouselTracks} style={{
-              height: '100%',
-              paddingTop: isVideoPoppedOut ? '80px' : '50px', // More padding when expanded
-              boxSizing: 'border-box',
-              overflow: 'visible' // Allow content to overflow
-            }}>
+            <CarouselLayout 
+              tracks={carouselTracks} 
+              orientation="horizontal"
+              style={{
+                height: '100%',
+                paddingTop: isVideoPoppedOut ? '80px' : '50px', // More padding when expanded
+                boxSizing: 'border-box',
+                overflow: 'visible' // Allow content to overflow
+              }}>
               <CustomParticipantTile isVideoPoppedOut={isVideoPoppedOut} />
             </CarouselLayout>
           </div>
@@ -375,8 +380,8 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
           </div>
 
           {/* Center section - Transport controls */}
-          <ControlBar 
-            controls={{ leave: false, holdToTalk: false, playback: true }} 
+          <ControlBar
+            controls={{ leave: false, holdToTalk: false, playback: true }}
             onSendMessage={(message) => chatRef.current?.send(message)}
           />
 
