@@ -13,10 +13,20 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	"time"
 
+	lksdk2 "github.com/livekit/server-sdk-go/v2"
 	"golang.org/x/net/websocket"
 	"tractor.dev/toolkit-go/engine/cli"
 )
+
+// TimelineState represents the current playback timeline state
+type TimelineState struct {
+	Title       string `json:"title"`
+	CurrentTime int    `json:"currentTime"` // in milliseconds
+	TotalTime   int    `json:"totalTime"`   // in milliseconds, 0 if unknown
+	Playing     bool   `json:"playing"`
+}
 
 func castCmd() *cli.Command {
 	cmd := &cli.Command{
@@ -48,6 +58,47 @@ func castCmd() *cli.Command {
 				log.Fatal("fetch settings:", err)
 			}
 			fmt.Println("SETTINGS:", settings)
+
+			// TODO
+			// // Connect to LiveKit room for timeline broadcasting
+			// room, err := lksdk2.ConnectToRoom(settings["livekit_url"].(string), lksdk2.ConnectInfo{
+			// 	APIKey:              "devkey",
+			// 	APISecret:           "secret",
+			// 	RoomName:            "theater",
+			// 	ParticipantIdentity: "timelinebot",
+			// }, &lksdk2.RoomCallback{})
+			// if err != nil {
+			// 	log.Fatal("connect to room:", err)
+			// }
+			// defer room.Disconnect()
+
+			// Initialize timeline state
+			timelineState := &TimelineState{}
+
+			// Get total duration if we have a filename
+			if filename != "" {
+				durationMs, err := fileDurationMs(filename)
+				if err != nil {
+					log.Println("Warning: could not get file duration:", err)
+				} else {
+					timelineState.TotalTime = durationMs
+				}
+			}
+
+			// Timeline broadcast function
+			broadcastTimeline := func(state *TimelineState) {
+				stateBytes, err := json.Marshal(state)
+				if err != nil {
+					log.Println("timeline marshal:", err)
+					return
+				}
+				dp := lksdk2.UserData(stateBytes)
+				dp.Topic = "timeline-updates"
+				// TODO
+				// if err := room.LocalParticipant.PublishDataPacket(dp, lksdk2.WithDataPublishReliable(true), lksdk2.WithDataPublishTopic("timeline-updates")); err != nil {
+				// 	log.Println("timeline publish:", err)
+				// }
+			}
 
 			l, err := net.Listen("tcp", ":1935")
 			if err != nil {
@@ -86,14 +137,37 @@ func castCmd() *cli.Command {
 				if err != nil {
 					return err
 				}
+
+				// Update timeline state to playing
+				timelineState.Playing = true
+				timelineState.CurrentTime = startMs
+				broadcastTimeline(timelineState)
+
 				go func() {
-					for progress := range progressChan {
-						timeMs, err := parseTimeToMs(progress["out_time"])
-						if err != nil {
-							log.Fatal("parse time:", err)
+					ticker := time.NewTicker(1 * time.Second)
+					defer ticker.Stop()
+
+					for {
+						select {
+						case progress, ok := <-progressChan:
+							if !ok {
+								// ffmpeg stopped, mark as not playing
+								timelineState.Playing = false
+								broadcastTimeline(timelineState)
+								return
+							}
+							timeMs, err := parseTimeToMs(progress["out_time"])
+							if err != nil {
+								log.Fatal("parse time:", err)
+							}
+							currentTime = formatTimeMs(startMs + timeMs)
+							timelineState.CurrentTime = startMs + timeMs
+						case <-ticker.C:
+							// Broadcast timeline updates every second
+							if timelineState.Playing {
+								broadcastTimeline(timelineState)
+							}
 						}
-						// log.Println("progress:", progress["out_time"])
-						currentTime = formatTimeMs(startMs + timeMs)
 					}
 				}()
 
@@ -105,6 +179,9 @@ func castCmd() *cli.Command {
 					cmd.Process.Kill()
 					cmd = nil
 				}
+				// Update timeline state to paused
+				timelineState.Playing = false
+				broadcastTimeline(timelineState)
 				return nil
 			}
 			slashBack := func(args []string) error {

@@ -13,6 +13,7 @@ import {
 import { Chat, formatChatMessageLinks, Settings, ControlBar, HoldToTalk } from './vendor/livekit'
 import { CustomParticipantTile } from './components/CustomParticipantTile'
 import { StreamParticipantTile } from './components/StreamParticipantTile'
+import Timeline from './components/Timeline'
 import { Track } from 'livekit-client'
 import { getRoomFromToken, getParticipantFromToken } from './utils'
 import { useState, useRef, useEffect } from 'react'
@@ -362,6 +363,9 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
               <CustomParticipantTile isVideoPoppedOut={isVideoPoppedOut} />
             </CarouselLayout>
           </div>
+
+          {/* Timeline - shows video progress */}
+          <Timeline />
         </div>
         <div style={{
           display: 'flex',
