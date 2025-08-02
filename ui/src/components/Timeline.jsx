@@ -16,6 +16,7 @@ function Timeline({ url }) {
     stateFeed.onmessage = (event) => {
       try {
         const update = JSON.parse(event.data)
+        console.log('Timeline received state update:', update)
         // Map SharedState to timeline state
         setTimelineState({
           title: update.Title || '',
@@ -63,55 +64,114 @@ function Timeline({ url }) {
 
   return (
     <div style={{
-      position: 'absolute',
-      bottom: '60px', // Position above the control bar
-      left: '12px',
-      right: '12px',
-      backgroundColor: 'rgba(0, 0, 0, 0.7)',
-      borderRadius: '4px',
-      padding: '8px 12px',
+      backgroundColor: 'var(--lk-bg2)',
+      padding: '12px 16px 8px 16px',
       display: 'flex',
-      alignItems: 'center',
-      gap: '12px',
+      flexDirection: 'column',
+      gap: '6px',
       color: 'white',
-      fontSize: '14px',
-      zIndex: 10
+      fontSize: '13px'
     }}>
-      {/* Current time */}
-      <span style={{ minWidth: '50px', textAlign: 'right' }}>
-        {formatTime(timelineState.currentTime)}
-      </span>
-
-      {/* Progress bar */}
-      <div style={{
-        flex: 1,
-        height: '4px',
-        backgroundColor: 'rgba(255, 255, 255, 0.3)',
-        borderRadius: '2px',
-        overflow: 'hidden'
-      }}>
+      {/* Title row */}
+      {timelineState.title && (
         <div style={{
-          width: `${progress}%`,
-          height: '100%',
-          backgroundColor: '#ff4444',
-          borderRadius: '2px',
-          transition: 'width 0.1s ease-out'
-        }} />
-      </div>
-
-      {/* Total time */}
-      <span style={{ minWidth: '50px' }}>
-        {formatTime(timelineState.totalTime)}
-      </span>
-
-      {/* Playing indicator */}
+          fontSize: '14px',
+          fontWeight: '500',
+          color: 'rgba(255, 255, 255, 0.9)',
+          marginBottom: '4px',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}>
+          {timelineState.title}
+        </div>
+      )}
+      
+      {/* Timeline controls */}
       <div style={{
-        width: '8px',
-        height: '8px',
-        borderRadius: '50%',
-        backgroundColor: timelineState.playing ? '#4CAF50' : '#666',
-        flexShrink: 0
-      }} />
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px'
+      }}>
+        {/* Current time */}
+        <span style={{ 
+          minWidth: '45px', 
+          textAlign: 'right',
+          fontSize: '12px',
+          fontFamily: 'monospace',
+          color: 'rgba(255, 255, 255, 0.9)'
+        }}>
+          {formatTime(timelineState.currentTime)}
+        </span>
+
+        {/* Progress bar container */}
+        <div style={{
+          flex: 1,
+          height: '6px',
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          borderRadius: '3px',
+          overflow: 'hidden',
+          cursor: 'pointer',
+          position: 'relative'
+        }}>
+          {/* Progress fill */}
+          <div style={{
+            width: `${progress}%`,
+            height: '100%',
+            backgroundColor: '#ff0000',
+            borderRadius: '3px',
+            transition: 'width 0.1s ease-out',
+            position: 'relative'
+          }}>
+            {/* Progress bar handle */}
+            <div style={{
+              position: 'absolute',
+              right: '-6px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              width: '12px',
+              height: '12px',
+              backgroundColor: '#ff0000',
+              borderRadius: '50%',
+              boxShadow: '0 0 4px rgba(0, 0, 0, 0.5)'
+            }} />
+          </div>
+        </div>
+
+        {/* Total time */}
+        <span style={{ 
+          minWidth: '45px',
+          fontSize: '12px',
+          fontFamily: 'monospace',
+          color: 'rgba(255, 255, 255, 0.9)'
+        }}>
+          {formatTime(timelineState.totalTime)}
+        </span>
+
+        {/* Playing indicator */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px'
+        }}>
+          <div style={{
+            width: '6px',
+            height: '6px',
+            borderRadius: '50%',
+            backgroundColor: timelineState.playing ? '#00ff00' : '#666',
+            flexShrink: 0,
+            boxShadow: timelineState.playing ? '0 0 6px #00ff00' : 'none'
+          }} />
+          <span style={{
+            fontSize: '11px',
+            color: 'rgba(255, 255, 255, 0.7)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px'
+          }}>
+            {timelineState.playing ? 'Live' : 'Paused'}
+          </span>
+        </div>
+      </div>
     </div>
   )
 }

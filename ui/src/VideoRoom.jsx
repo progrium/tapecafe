@@ -387,18 +387,24 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             </CarouselLayout>
           </div>
 
-          {/* Timeline - shows video progress */}
-          <Timeline url={url} />
         </div>
         <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem',
           flexShrink: 0,
           borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-          justifyContent: 'space-between',
-          padding: '12px',
+          display: 'flex',
+          flexDirection: 'column'
         }}>
+          {/* Timeline - shows video progress */}
+          <Timeline url={url} />
+          
+          {/* Control bar with transport buttons */}
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem',
+            justifyContent: 'space-between',
+            padding: '12px',
+          }}>
           {/* Left section - Leave button */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <DisconnectButton>
@@ -608,6 +614,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             >
               ⚙️ Settings
             </button>
+          </div>
           </div>
         </div>
       </div>
