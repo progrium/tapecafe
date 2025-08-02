@@ -388,7 +388,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
           </div>
 
           {/* Timeline - shows video progress */}
-          <Timeline />
+          <Timeline url={url} />
         </div>
         <div style={{
           display: 'flex',

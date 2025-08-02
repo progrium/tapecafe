@@ -1,37 +1,45 @@
 import { useState, useEffect } from 'react'
-import { useRoomContext } from '@livekit/components-react'
 
-function Timeline() {
+function Timeline({ url }) {
   const [timelineState, setTimelineState] = useState({
     title: '',
     currentTime: 0,
     totalTime: 0,
     playing: false
   })
-  const room = useRoomContext()
 
   useEffect(() => {
-    if (!room) return
+    if (!url) return
 
-    const handleDataReceived = (payload, participant) => {
-      if (participant.identity === 'timelinebot') {
-        try {
-          const data = JSON.parse(new TextDecoder().decode(payload))
-          if (data.currentTime !== undefined) {
-            setTimelineState(data)
-          }
-        } catch (error) {
-          console.error('Failed to parse timeline data:', error)
-        }
+    const stateFeed = new WebSocket(`${url}/state`)
+    
+    stateFeed.onmessage = (event) => {
+      try {
+        const update = JSON.parse(event.data)
+        // Map SharedState to timeline state
+        setTimelineState({
+          title: update.Title || '',
+          currentTime: update.PositionMs || 0,
+          totalTime: update.LengthMs || 0,
+          playing: update.Status === '' // Empty status means playing
+        })
+      } catch (error) {
+        console.error('Failed to parse state data:', error)
       }
     }
 
-    room.on('dataReceived', handleDataReceived)
+    stateFeed.onerror = (error) => {
+      console.error('Timeline websocket error:', error)
+    }
+
+    stateFeed.onclose = () => {
+      console.log('Timeline websocket closed')
+    }
 
     return () => {
-      room.off('dataReceived', handleDataReceived)
+      stateFeed.close()
     }
-  }, [room])
+  }, [url])
 
   // Format time from milliseconds to MM:SS or HH:MM:SS
   const formatTime = (ms) => {
