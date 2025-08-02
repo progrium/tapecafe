@@ -38,7 +38,7 @@ export const Chat = forwardRef(function Chat({
     event.preventDefault()
     if (inputRef.current && inputRef.current.value.trim() !== '') {
       setJustSentMessage(true)
-      await send(inputRef.current.value)
+      await send(inputRef.current.value.trim())
       inputRef.current.value = ''
       inputRef.current.focus()
     }
@@ -115,43 +115,26 @@ export const Chat = forwardRef(function Chat({
                 )
               })}
         </ul>
-        <form className="lk-chat-form" onSubmit={handleSubmit} style={{ 
-          flexShrink: 0, 
-          display: 'flex', 
-          alignItems: 'flex-end', 
-          gap: '0.5rem' 
-        }}>
+        <form className="lk-chat-form" onSubmit={handleSubmit} style={{ flexShrink: 0 }}>
           <textarea
             className="lk-form-control lk-chat-form-input"
             disabled={isSending}
             ref={inputRef}
             placeholder="Enter a message..."
-            rows={1}
             style={{ 
-              resize: 'none', 
-              minHeight: '2.5rem',
-              maxHeight: '6rem',
-              overflowY: 'auto',
-              flex: 1
+              resize: 'none',
+              overflowY: 'auto'
             }}
-            onInput={(ev) => {
-              ev.stopPropagation()
-              // Auto-resize textarea based on content
-              const textarea = ev.target
-              textarea.style.height = 'auto'
-              textarea.style.height = Math.min(textarea.scrollHeight, 96) + 'px' // 96px = 6rem max
-            }}
+            onInput={(ev) => ev.stopPropagation()}
             onKeyDown={(ev) => {
               ev.stopPropagation()
               handleKeyDown(ev)
             }}
             onKeyUp={(ev) => ev.stopPropagation()}
           />
-          <div style={{ alignSelf: 'flex-end' }}>
-            <button type="submit" className="lk-button lk-chat-form-button" disabled={isSending}>
-              Send
-            </button>
-          </div>
+          <button type="submit" className="lk-button lk-chat-form-button" disabled={isSending}>
+            Send
+          </button>
         </form>
       </div>
     </ParticipantNamesProvider>
