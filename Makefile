@@ -4,25 +4,31 @@ VERSION 		?= v0.1-$(shell git rev-parse --short HEAD)
 GOARGS			?=
 GOOS			?= $(shell go env GOOS)
 GOARCH			?= $(shell go env GOARCH)
-BIN 			?= /usr/local/bin
+LINK_BIN 		?= /usr/local/bin
 DIST_DIR		?= .local/dist
 DIST_OS			?= darwin windows linux
 DIST_ARCH		?= arm64 amd64
 
 ## Link/install the local binary
-link: build
-	[ -f "$(BIN)/$(NAME)" ] && rm "$(BIN)/$(NAME)" || true
-	ln -fs "$(shell pwd)/.local/bin/$(NAME)" "$(BIN)/$(NAME)"
+link:
+	[ -f "$(LINK_BIN)/$(NAME)" ] && rm "$(LINK_BIN)/$(NAME)" || true
+	ln -fs "$(shell pwd)/.local/bin/$(NAME)" "$(LINK_BIN)/$(NAME)"
 .PHONY: link
 
 ## Build binary
-build:
+build: ui/dist
 	go build -ldflags="-X main.Version=$(VERSION)" \
 		$(GOARGS) \
 		-o .local/bin/$(NAME) \
 		./cmd/$(NAME)
 .PHONY: build
 
+## Clean
+clean:
+	rm -rf .local/bin
+	rm -rf .local/dist
+	rm -rf ui/dist
+.PHONY: clean
 
 DIST_TARGETS	:= $(foreach os, $(DIST_OS), $(foreach arch, $(DIST_ARCH), $(DIST_DIR)/$(NAME)_$(VERSION)_$(os)_$(arch)))
 $(DIST_TARGETS): $(DIST_DIR)/%:
@@ -33,6 +39,12 @@ $(DIST_TARGETS): $(DIST_DIR)/%:
 ## Build distribution binaries
 dist: $(DIST_TARGETS)
 .PHONY: dist
+
+ui/node_modules: ui/package.json
+	cd ui && npm install
+
+ui/dist: ui/node_modules
+	cd ui && npm run build
 
 .DEFAULT_GOAL := show-help
 
