@@ -28,6 +28,7 @@ body {
 
 .lk-message-body {
   word-break: break-word;
+  white-space: pre-wrap;
 }
 
 /* Chat header is now styled inline in the component */

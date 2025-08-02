@@ -44,6 +44,15 @@ export const Chat = forwardRef(function Chat({
     }
   }
 
+  function handleKeyDown(event) {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      // Enter without shift submits the form
+      event.preventDefault()
+      handleSubmit(event)
+    }
+    // Shift+Enter allows newlines (default textarea behavior)
+  }
+
   // Track scroll position before messages change
   useEffect(() => {
     if (ulRef.current) {
@@ -106,20 +115,43 @@ export const Chat = forwardRef(function Chat({
                 )
               })}
         </ul>
-        <form className="lk-chat-form" onSubmit={handleSubmit} style={{ flexShrink: 0 }}>
-          <input
+        <form className="lk-chat-form" onSubmit={handleSubmit} style={{ 
+          flexShrink: 0, 
+          display: 'flex', 
+          alignItems: 'flex-end', 
+          gap: '0.5rem' 
+        }}>
+          <textarea
             className="lk-form-control lk-chat-form-input"
             disabled={isSending}
             ref={inputRef}
-            type="text"
             placeholder="Enter a message..."
-            onInput={(ev) => ev.stopPropagation()}
-            onKeyDown={(ev) => ev.stopPropagation()}
+            rows={1}
+            style={{ 
+              resize: 'none', 
+              minHeight: '2.5rem',
+              maxHeight: '6rem',
+              overflowY: 'auto',
+              flex: 1
+            }}
+            onInput={(ev) => {
+              ev.stopPropagation()
+              // Auto-resize textarea based on content
+              const textarea = ev.target
+              textarea.style.height = 'auto'
+              textarea.style.height = Math.min(textarea.scrollHeight, 96) + 'px' // 96px = 6rem max
+            }}
+            onKeyDown={(ev) => {
+              ev.stopPropagation()
+              handleKeyDown(ev)
+            }}
             onKeyUp={(ev) => ev.stopPropagation()}
           />
-          <button type="submit" className="lk-button lk-chat-form-button" disabled={isSending}>
-            Send
-          </button>
+          <div style={{ alignSelf: 'flex-end' }}>
+            <button type="submit" className="lk-button lk-chat-form-button" disabled={isSending}>
+              Send
+            </button>
+          </div>
         </form>
       </div>
     </ParticipantNamesProvider>

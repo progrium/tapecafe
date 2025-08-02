@@ -42,7 +42,7 @@ export const ChatEntry = forwardRef(function ChatEntry(
         style={{ fontStyle: 'italic', color: '#888', textAlign: 'center', margin: '4px 0' }}
         {...props}
       >
-        <span className="lk-message-body">{formattedMessage}</span>
+        <span className="lk-message-body" style={{ whiteSpace: 'pre-wrap' }}>{formattedMessage}</span>
       </li>
     )
   }
@@ -68,7 +68,7 @@ export const ChatEntry = forwardRef(function ChatEntry(
         </span>
       )}
 
-      <span className="lk-message-body">{formattedMessage}</span>
+      <span className="lk-message-body" style={{ whiteSpace: 'pre-wrap' }}>{formattedMessage}</span>
       <span className="lk-message-attachements">
         {entry.attachedFiles?.map(
           (file) =>
