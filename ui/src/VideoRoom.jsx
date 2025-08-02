@@ -356,7 +356,17 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             inset: 0,
             visibility: isVideoPoppedOut ? 'hidden' : 'visible'
           }}>
-            <div id="osd">█ NO TAPE</div>
+            <div id="osd" style={{
+              position: 'absolute',
+              top: '10px',
+              left: '10px',
+              color: 'white',
+              fontSize: '14px',
+              fontFamily: 'monospace',
+              zIndex: 10,
+              pointerEvents: 'none',
+              textShadow: '0 0 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.6)'
+            }}>█ NO TAPE</div>
             <GridLayout tracks={gridTracks} style={{ height: '100%' }}>
               <StreamParticipantTile />
             </GridLayout>
