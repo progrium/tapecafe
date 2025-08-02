@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react'
+import { useRef, useEffect, useMemo, useImperativeHandle, forwardRef, useState } from 'react'
 import { useChat } from '../hooks/useChat'
 import { ChatEntry } from './ChatEntry'
 import { formatChatMessageLinks } from './ChatEntry'
@@ -14,6 +14,8 @@ export const Chat = forwardRef(function Chat({
 }, ref) {
   const ulRef = useRef(null)
   const inputRef = useRef(null)
+  const [wasAtBottom, setWasAtBottom] = useState(true)
+  const [justSentMessage, setJustSentMessage] = useState(false)
 
   const chatOptions = useMemo(() => {
     return { messageDecoder, messageEncoder, channelTopic }
@@ -21,25 +23,55 @@ export const Chat = forwardRef(function Chat({
 
   const { chatMessages, send, isSending } = useChat(chatOptions)
 
-  // Expose the send function via ref
+  // Wrap send function to track when user sends messages
+  const wrappedSend = async (message) => {
+    setJustSentMessage(true)
+    return await send(message)
+  }
+
+  // Expose the wrapped send function via ref
   useImperativeHandle(ref, () => ({
-    send
+    send: wrappedSend
   }), [send])
 
   async function handleSubmit(event) {
     event.preventDefault()
     if (inputRef.current && inputRef.current.value.trim() !== '') {
+      setJustSentMessage(true)
       await send(inputRef.current.value)
       inputRef.current.value = ''
       inputRef.current.focus()
     }
   }
 
+  // Track scroll position before messages change
   useEffect(() => {
     if (ulRef.current) {
-      ulRef.current.scrollTo({ top: ulRef.current.scrollHeight })
+      const element = ulRef.current
+      const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 10
+      setWasAtBottom(isAtBottom)
     }
-  }, [chatMessages])
+  }, [chatMessages.length - 1]) // Run before the latest message is processed
+
+  // Handle scrolling after messages change
+  useEffect(() => {
+    if (ulRef.current) {
+      const element = ulRef.current
+      
+      // Scroll to bottom if:
+      // 1. User was at bottom before new message
+      // 2. User just sent a message 
+      // 3. This is the first message
+      if (wasAtBottom || justSentMessage || chatMessages.length === 1) {
+        element.scrollTo({ top: element.scrollHeight })
+      }
+      
+      // Reset the justSentMessage flag
+      if (justSentMessage) {
+        setJustSentMessage(false)
+      }
+    }
+  }, [chatMessages, wasAtBottom, justSentMessage])
 
   return (
     <ParticipantNamesProvider>
