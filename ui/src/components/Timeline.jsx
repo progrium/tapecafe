@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 
-function Timeline({ url }) {
+function Timeline({ url, onSendMessage }) {
   const [timelineState, setTimelineState] = useState({
     title: '',
     currentTime: 0,
@@ -15,7 +15,7 @@ function Timeline({ url }) {
     if (!url) return
 
     const stateFeed = new WebSocket(`${url}/state`)
-    
+
     stateFeed.onmessage = (event) => {
       try {
         const update = JSON.parse(event.data)
@@ -68,18 +68,31 @@ function Timeline({ url }) {
   // Handle mouse hover over progress bar
   const handleMouseMove = (e) => {
     if (!progressBarRef.current || timelineState.totalTime === 0) return
-    
+
     const rect = progressBarRef.current.getBoundingClientRect()
     const x = e.clientX - rect.left
     const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100))
     const time = (percentage / 100) * timelineState.totalTime
-    
+
     setHoverTime(time)
     setHoverPosition(x)
   }
 
   const handleMouseLeave = () => {
     setHoverTime(null)
+  }
+
+  const handleClick = (e) => {
+    if (!progressBarRef.current || timelineState.totalTime === 0 || !onSendMessage) return
+
+    const rect = progressBarRef.current.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const percentage = Math.max(0, Math.min(100, (x / rect.width) * 100))
+    const time = (percentage / 100) * timelineState.totalTime
+
+    // Send seek command with formatted time (same format as tooltip)
+    const formattedTime = formatTime(time)
+    onSendMessage(`/seek ${formattedTime}`)
   }
 
   return (
@@ -106,7 +119,7 @@ function Timeline({ url }) {
           {timelineState.title}
         </div>
       )}
-      
+
       {/* Timeline controls */}
       <div style={{
         display: 'flex',
@@ -114,8 +127,8 @@ function Timeline({ url }) {
         gap: '12px'
       }}>
         {/* Current time */}
-        <span style={{ 
-          minWidth: '45px', 
+        <span style={{
+          minWidth: '45px',
           textAlign: 'right',
           fontSize: '12px',
           fontFamily: 'monospace',
@@ -125,7 +138,7 @@ function Timeline({ url }) {
         </span>
 
         {/* Progress bar container */}
-        <div 
+        <div
           ref={progressBarRef}
           style={{
             flex: 1,
@@ -138,6 +151,7 @@ function Timeline({ url }) {
           }}
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
+          onClick={handleClick}
         >
           {/* Hover tooltip */}
           {hoverTime !== null && (
@@ -160,7 +174,7 @@ function Timeline({ url }) {
               {formatTime(hoverTime)}
             </div>
           )}
-          
+
           {/* Progress bar track */}
           <div style={{
             position: 'absolute',
@@ -197,7 +211,7 @@ function Timeline({ url }) {
         </div>
 
         {/* Total time */}
-        <span style={{ 
+        <span style={{
           minWidth: '45px',
           fontSize: '12px',
           fontFamily: 'monospace',

@@ -395,7 +395,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
           flexDirection: 'column'
         }}>
           {/* Timeline - shows video progress */}
-          <Timeline url={url} />
+          <Timeline url={url} onSendMessage={(message) => chatRef.current?.send(message)} />
           
           {/* Control bar with transport buttons */}
           <div style={{
