@@ -37,7 +37,7 @@ $(DIST_TARGETS): $(DIST_DIR)/%:
 	go build -ldflags="-X main.Version=$(VERSION)" $(GOARGS) -o $@ ./cmd/$(NAME)	
 
 ## Build distribution binaries
-dist: $(DIST_TARGETS) ui/dist
+dist: ui/dist $(DIST_TARGETS)
 .PHONY: dist
 
 ui/node_modules: ui/package.json
