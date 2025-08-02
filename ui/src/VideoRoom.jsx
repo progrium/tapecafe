@@ -55,6 +55,28 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
   const handleConnected = async (room) => {
     console.log('✅ Successfully connected to room:', room?.name || roomName || 'Unknown')
     console.log('🎥 Track pre-acquisition will happen when localParticipant is ready')
+    const stateFeed = new WebSocket(`${url}/state`)
+    let linger = false
+    let lastStatus = ""
+    stateFeed.onmessage = (event) => {
+      const update = JSON.parse(event.data)
+      const osd = document.querySelector('#osd')
+      if (lastStatus !== "" && update.Status === "") {
+        linger = true
+        setTimeout(() => {
+          linger = false
+          console.log("🔄 Linger timeout")
+        }, 2000);
+      }
+      if (!linger) {
+        document.querySelector('#osd').textContent = update.Status;
+      }
+      lastStatus = update.Status
+      console.log('🔄 State message:', update.Status, update)
+    }
+    stateFeed.onerror = (error) => {
+      console.error('🚫 State connection error:', error)
+    }
   }
 
   const handleDisconnected = (reason) => {
@@ -334,6 +356,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             inset: 0,
             visibility: isVideoPoppedOut ? 'hidden' : 'visible'
           }}>
+            <div id="osd">█ NO TAPE</div>
             <GridLayout tracks={gridTracks} style={{ height: '100%' }}>
               <StreamParticipantTile />
             </GridLayout>
