@@ -4,26 +4,31 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"log"
 	"net"
 	"net/http"
-	"net/url"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/koding/websocketproxy"
+	"github.com/google/uuid"
 	"github.com/livekit/protocol/auth"
 	lkp "github.com/livekit/protocol/livekit"
 	lksdk "github.com/livekit/server-sdk-go"
 	lksdk2 "github.com/livekit/server-sdk-go/v2"
+	"github.com/progrium/tapecafe/caster"
+	"github.com/progrium/tapecafe/server"
 	"github.com/progrium/tapecafe/ui"
 	"github.com/rs/xid"
 	"golang.ngrok.com/ngrok"
 	ngrokconfig "golang.ngrok.com/ngrok/config"
 	"golang.org/x/net/websocket"
+	"tractor.dev/toolkit-go/duplex/codec"
+	"tractor.dev/toolkit-go/duplex/mux"
+	"tractor.dev/toolkit-go/duplex/rpc"
+	"tractor.dev/toolkit-go/duplex/talk"
 	"tractor.dev/toolkit-go/engine/cli"
 )
 
@@ -33,13 +38,13 @@ var (
 	lkURL      string
 	ingressURL string
 	ingressKey string
+
+	stateListeners sync.Map
 )
 
 func serveCmd() *cli.Command {
 	cmd := &cli.Command{
 		Usage: "serve",
-		// Short: "",
-		// Args: cli.MinArgs(1),
 		Run: func(ctx *cli.Context, args []string) {
 			l, err := setupListener()
 			if err != nil {
@@ -53,116 +58,140 @@ func serveCmd() *cli.Command {
 				log.Fatal("ensure ingress:", err)
 			}
 
-			http.Handle("/cast", websocket.Handler(serveCast))
-			http.Handle("/chat", websocket.Handler(serveChat))
-			http.HandleFunc("/settings", serveSettings)
-			http.HandleFunc("/rtc", serveRTC)
-			http.HandleFunc("/", serveParticipate)
+			mux := http.NewServeMux()
+			mux.Handle("/cast/ingress", websocket.Handler(server.HandleIngress))
+			mux.Handle("/cast/rpc", websocket.Handler(serveRPC))
+			mux.Handle("/state", websocket.Handler(handleState))
+			mux.Handle("/rtc", http.HandlerFunc(server.ProxyRTC))
+			mux.Handle("/", http.HandlerFunc(handleParticipate))
 
-			log.Fatal(http.Serve(l, nil))
+			log.Fatal(http.Serve(l, corsMiddleware(mux)))
 		},
 	}
 	cmd.Flags().StringVar(&bindAddr, "bind", ":9091", "address to bind the server")
 	return cmd
 }
 
-func serveRTC(w http.ResponseWriter, r *http.Request) {
-	u, _ := url.Parse("ws://localhost:7880/rtc")
-	websocketproxy.DefaultUpgrader.CheckOrigin = func(r *http.Request) bool {
-		return true
-	}
-	websocketproxy.NewProxy(u).ServeHTTP(w, r)
-}
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set CORS headers
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Max-Age", "3600")
 
-func serveSettings(w http.ResponseWriter, r *http.Request) {
-	enc := json.NewEncoder(w)
-	w.Header().Set("Content-Type", "application/json")
-	if err := enc.Encode(map[string]string{
-		"ingress_url": ingressURL,
-		"ingress_key": ingressKey,
-		"livekit_url": lkURL,
-	}); err != nil {
-		log.Println("settings encode:", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-}
+		// Handle preflight requests
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
 
-func serveCast(conn *websocket.Conn) {
-	conn.PayloadType = websocket.BinaryFrame
-	log.Println("New cast connection")
-	c, err := net.Dial("tcp", "localhost:1935")
-	if err != nil {
-		log.Fatal("dial:", err)
-	}
-	defer c.Close()
-	go io.Copy(conn, c)
-	_, err = io.Copy(c, conn)
-	if err != nil {
-		log.Println("copy:", err)
-		return
-	}
-}
-
-func serveChat(conn *websocket.Conn) {
-	log.Println("New chatbot connection")
-	defer conn.Close()
-	done := make(chan struct{})
-	_, err := lksdk2.ConnectToRoom("http://localhost:7880", lksdk2.ConnectInfo{
-		APIKey:              "devkey",
-		APISecret:           "secret",
-		RoomName:            "theater",
-		ParticipantIdentity: "chatbot",
-	}, &lksdk2.RoomCallback{
-		ParticipantCallback: lksdk2.ParticipantCallback{
-			OnDataPacket: func(data lksdk2.DataPacket, params lksdk2.DataReceiveParams) {
-				m := make(map[string]any)
-				err := json.Unmarshal(data.ToProto().Value.(*lkp.DataPacket_User).User.Payload, &m)
-				if err != nil {
-					log.Println("chat:", err)
-					return
-				}
-				enc := json.NewEncoder(conn)
-				log.Println("CHAT:", m)
-				if err := enc.Encode(m); err != nil {
-					log.Println("chat:", err)
-					return
-				}
-			},
-		},
-		OnDisconnected: func() {
-			done <- struct{}{}
-		},
+		// Call the next handler
+		next.ServeHTTP(w, r)
 	})
-	if err != nil {
-		log.Println("chat:", err)
-		return
-	}
-	// for {
-
-	// 	msg := map[string]any{
-	// 		"id": uuid.NewString(),
-	// 		// "ignoreLegacy": true,
-	// 		"message":   "Hello, world!",
-	// 		"timestamp": time.Now().UnixMilli(),
-	// 	}
-	// 	msgBytes, err := json.Marshal(msg)
-	// 	if err != nil {
-	// 		log.Println("chat marshal:", err)
-	// 		return
-	// 	}
-	// 	dp := lksdk2.UserData(msgBytes)
-	// 	dp.Topic = "lk-chat-topic"
-	// 	if err := room.LocalParticipant.PublishDataPacket(dp, lksdk2.WithDataPublishReliable(true), lksdk2.WithDataPublishTopic("lk-chat-topic")); err != nil {
-	// 		log.Println("chat publish:", err)
-	// 	}
-	// 	time.Sleep(5 * time.Second)
-	// }
-
-	<-done
 }
 
-func serveParticipate(w http.ResponseWriter, r *http.Request) {
+func handleState(conn *websocket.Conn) {
+	stateListeners.Store(conn, true)
+	<-conn.Request().Context().Done()
+	stateListeners.Delete(conn)
+}
+
+func serveRPC(conn *websocket.Conn) {
+	log.Println("New RPC connection")
+	conn.PayloadType = websocket.BinaryFrame
+	defer conn.Close()
+	peer := talk.NewPeer(mux.New(conn), codec.CBORCodec{})
+	peer.Handle("cast.ingress", rpc.HandlerFunc(func(r rpc.Responder, c *rpc.Call) {
+		r.Return(fmt.Sprintf("/live/%s", ingressKey))
+	}))
+	peer.Handle("cast.state", rpc.HandlerFunc(func(r rpc.Responder, c *rpc.Call) {
+		var state caster.SharedState
+		if err := c.Receive(&state); err != nil {
+			log.Println("state:", err)
+			return
+		}
+		msg, err := json.Marshal(state)
+		if err != nil {
+			log.Println("state:", err)
+			return
+		}
+		stateListeners.Range(func(key, value any) bool {
+			if conn, ok := key.(*websocket.Conn); ok {
+				_, err := conn.Write(msg)
+				if err != nil {
+					stateListeners.Delete(conn)
+					log.Println("state:", err)
+				}
+			}
+			return true
+		})
+	}))
+	peer.Handle("cast.chat", rpc.HandlerFunc(func(r rpc.Responder, c *rpc.Call) {
+		_, err := r.Continue()
+		if err != nil {
+			log.Println("chat:", err)
+		}
+		done := make(chan struct{})
+		chat := make(chan string)
+		room, err := lksdk2.ConnectToRoom("http://localhost:7880", lksdk2.ConnectInfo{
+			APIKey:              "devkey",
+			APISecret:           "secret",
+			RoomName:            "theater",
+			ParticipantIdentity: "chatbot",
+		}, &lksdk2.RoomCallback{
+			ParticipantCallback: lksdk2.ParticipantCallback{
+				OnDataPacket: func(data lksdk2.DataPacket, params lksdk2.DataReceiveParams) {
+					m := make(map[string]any)
+					err := json.Unmarshal(data.ToProto().Value.(*lkp.DataPacket_User).User.Payload, &m)
+					if err != nil {
+						log.Println("chat:", err)
+						return
+					}
+					if err := r.Send(m); err != nil {
+						log.Println("chat:", err)
+						return
+					}
+				},
+			},
+			OnDisconnected: func() {
+				done <- struct{}{}
+			},
+		})
+		if err != nil {
+			log.Println("chat:", err)
+			return
+		}
+		for {
+			select {
+			case <-done:
+				return
+			case msg := <-chat:
+				msgBytes, err := json.Marshal(map[string]any{
+					"id":        uuid.NewString(),
+					"message":   msg,
+					"timestamp": time.Now().UnixMilli(),
+				})
+				if err != nil {
+					log.Println("chat marshal:", err)
+					return
+				}
+				dp := lksdk2.UserData(msgBytes)
+				dp.Topic = "lk-chat-topic"
+				if err := room.LocalParticipant.PublishDataPacket(dp,
+					lksdk2.WithDataPublishReliable(true),
+					lksdk2.WithDataPublishTopic("lk-chat-topic"),
+				); err != nil {
+					log.Println("chat publish:", err)
+				}
+			default:
+			}
+		}
+	}))
+	peer.Respond()
+}
+
+func handleParticipate(w http.ResponseWriter, r *http.Request) {
 	sub, err := fs.Sub(ui.Dir, "dist")
 	if err != nil {
 		log.Print(err)
