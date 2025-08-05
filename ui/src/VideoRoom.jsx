@@ -677,7 +677,9 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
               padding: '5px 10px',
               borderRadius: '4px',
               marginBottom: '2px',
-              background: 'rgba(31, 140, 249, 0.2)', // Subtle blue for local user
+              background: 'rgba(255, 255, 255, 0.15)', // Use white with alpha for consistency
+              borderLeft: '3px solid white',
+              paddingLeft: '8px',
               fontSize: '14px',
               color: '#fff',
               display: 'flex',
@@ -710,12 +712,16 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             {/* Remote participants */}
             {participants
               .filter(participant => participant.identity !== localParticipant?.identity)
-              .map((participant) => (
+              .map((participant) => {
+                const participantColor = getParticipantColor(participant.identity)
+                return (
                 <div key={participant.identity} style={{
                   padding: '5px 10px',
                   borderRadius: '4px',
                   marginBottom: '2px',
-                  background: getParticipantColor(participant.identity) ? `${getParticipantColor(participant.identity)}20` : 'rgba(255, 255, 255, 0.05)', // Use participant color with alpha
+                  background: participantColor ? `${participantColor}15` : 'rgba(255, 255, 255, 0.05)', // Use participant color with alpha
+                  borderLeft: participantColor ? `3px solid ${participantColor}` : undefined,
+                  paddingLeft: participantColor ? '8px' : undefined,
                   fontSize: '14px',
                   color: '#fff',
                   display: 'flex',
@@ -745,7 +751,8 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                     />
                   </div>
                 </div>
-              ))}
+                )
+              })}
           </div>
         </div>
 

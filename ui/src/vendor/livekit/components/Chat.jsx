@@ -151,7 +151,7 @@ export const Chat = forwardRef(function Chat({
                     onMouseEnter={() => setHoveredAuthor(msg.from?.identity)}
                     onMouseLeave={() => setHoveredAuthor(null)}
                     isAuthorHovered={hoveredAuthor === msg.from?.identity}
-                    participantColor={isOwnMessage ? null : participantColor}
+                    participantColor={isOwnMessage ? 'white' : participantColor}
                   />
                 )
               })}
