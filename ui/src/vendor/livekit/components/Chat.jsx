@@ -1,4 +1,4 @@
-import { useRef, useEffect, useMemo, useImperativeHandle, forwardRef, useState } from 'react'
+import { useRef, useEffect, useMemo, useImperativeHandle, forwardRef, useState, useCallback } from 'react'
 import { useChat } from '../hooks/useChat'
 import { ChatEntry } from './ChatEntry'
 import { formatChatMessageLinks } from './ChatEntry'
@@ -16,6 +16,7 @@ export const Chat = forwardRef(function Chat({
   const inputRef = useRef(null)
   const [wasAtBottom, setWasAtBottom] = useState(true)
   const [justSentMessage, setJustSentMessage] = useState(false)
+  const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false)
 
   const chatOptions = useMemo(() => {
     return { messageDecoder, messageEncoder, channelTopic }
@@ -53,26 +54,35 @@ export const Chat = forwardRef(function Chat({
     // Shift+Enter allows newlines (default textarea behavior)
   }
 
-  // Track scroll position before messages change
-  useEffect(() => {
+  // Check if user is at bottom of chat
+  const checkIfAtBottom = useCallback(() => {
     if (ulRef.current) {
       const element = ulRef.current
-      const isAtBottom = element.scrollTop + element.clientHeight >= element.scrollHeight - 10
-      setWasAtBottom(isAtBottom)
+      return element.scrollTop + element.clientHeight >= element.scrollHeight - 10
     }
-  }, [chatMessages.length - 1]) // Run before the latest message is processed
+    return true
+  }, [])
 
-  // Handle scrolling after messages change
+  // Handle scrolling when messages change
   useEffect(() => {
     if (ulRef.current) {
       const element = ulRef.current
+      const wasAtBottomBefore = wasAtBottom
+      const isAtBottomNow = checkIfAtBottom()
+      
+      // Update wasAtBottom state for next time
+      setWasAtBottom(isAtBottomNow)
       
       // Scroll to bottom if:
       // 1. User was at bottom before new message
       // 2. User just sent a message 
       // 3. This is the first message
-      if (wasAtBottom || justSentMessage || chatMessages.length === 1) {
+      if (wasAtBottomBefore || justSentMessage || chatMessages.length === 1) {
         element.scrollTo({ top: element.scrollHeight })
+        setShowNewMessageIndicator(false)
+      } else {
+        // Show new message indicator if user is scrolled up and new message arrived
+        setShowNewMessageIndicator(true)
       }
       
       // Reset the justSentMessage flag
@@ -80,7 +90,26 @@ export const Chat = forwardRef(function Chat({
         setJustSentMessage(false)
       }
     }
-  }, [chatMessages, wasAtBottom, justSentMessage])
+  }, [chatMessages, wasAtBottom, justSentMessage, checkIfAtBottom])
+
+  // Handle manual scrolling to update indicator
+  const handleScroll = useCallback(() => {
+    const isAtBottom = checkIfAtBottom()
+    setWasAtBottom(isAtBottom)
+    
+    // Hide indicator when user scrolls to bottom
+    if (isAtBottom) {
+      setShowNewMessageIndicator(false)
+    }
+  }, [checkIfAtBottom])
+
+  // Handle clicking the new message indicator
+  const handleNewMessageClick = useCallback(() => {
+    if (ulRef.current) {
+      ulRef.current.scrollTo({ top: ulRef.current.scrollHeight, behavior: 'smooth' })
+      setShowNewMessageIndicator(false)
+    }
+  }, [])
 
   return (
     <ParticipantNamesProvider>
@@ -95,7 +124,8 @@ export const Chat = forwardRef(function Chat({
           Messages
         </div>
 
-        <ul className="lk-list lk-chat-messages" ref={ulRef} style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
+        <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+          <ul className="lk-list lk-chat-messages" ref={ulRef} style={{ height: '100%', overflowY: 'auto', minHeight: 0 }} onScroll={handleScroll}>
           {children
             ? chatMessages.map((msg, idx) =>
                 children({ entry: msg, key: msg.id ?? idx, messageFormatter })
@@ -114,7 +144,32 @@ export const Chat = forwardRef(function Chat({
                   />
                 )
               })}
-        </ul>
+          </ul>
+          
+          {/* New message indicator */}
+          {showNewMessageIndicator && (
+            <div 
+              onClick={handleNewMessageClick}
+              style={{
+                position: 'absolute',
+                bottom: '10px',
+                left: '50%',
+                transform: 'translateX(-50%)',
+                backgroundColor: 'var(--lk-accent-color, #0066cc)',
+                color: 'white',
+                padding: '6px 12px',
+                borderRadius: '16px',
+                cursor: 'pointer',
+                fontSize: '12px',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                zIndex: 10,
+                userSelect: 'none'
+              }}
+            >
+              new messages ↓
+            </div>
+          )}
+        </div>
         <form className="lk-chat-form" onSubmit={handleSubmit} style={{ flexShrink: 0 }}>
           <textarea
             className="lk-form-control lk-chat-form-input"
