@@ -367,8 +367,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
               top: '10px',
               left: '10px',
               color: 'white',
-              fontSize: '14px',
-              fontFamily: 'monospace',
+              fontSize: '50px',
               zIndex: 10,
               pointerEvents: 'none',
               textShadow: '0 0 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.6)'
