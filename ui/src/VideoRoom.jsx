@@ -143,7 +143,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
     participant.identity !== 'streambot' && participant.identity !== 'chatbot'
   )
   const [chatWidth, setChatWidth] = useState(300)
-  const [participantsHeight, setParticipantsHeight] = useState(150)
+  const [participantsHeight, setParticipantsHeight] = useState(225)
   const [showSettings, setShowSettings] = useState(false)
   const [isVideoPoppedOut, setIsVideoPoppedOut] = useState(false)
   const [participantVolumes, setParticipantVolumes] = useState(new Map())

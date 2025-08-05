@@ -145,7 +145,7 @@ body {
 
 /* Participant Entry Components */
 .participant-entry {
-  padding: var(--space-lg) var(--space-lg);
+  padding: var(--space-sm) var(--space-lg);
   border-radius: var(--border-radius);
   margin-bottom: var(--space-xs);
   font-size: var(--font-size-normal);
