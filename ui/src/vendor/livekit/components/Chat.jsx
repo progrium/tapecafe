@@ -12,6 +12,8 @@ export const Chat = forwardRef(function Chat({
   messageEncoder,
   channelTopic,
   children,
+  hoveredAuthor,
+  setHoveredAuthor,
   ...props
 }, ref) {
   const ulRef = useRef(null)
@@ -19,8 +21,12 @@ export const Chat = forwardRef(function Chat({
   const [wasAtBottom, setWasAtBottom] = useState(true)
   const [justSentMessage, setJustSentMessage] = useState(false)
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false)
-  const [hoveredAuthor, setHoveredAuthor] = useState(null)
+  const [localHoveredAuthor, setLocalHoveredAuthor] = useState(null)
   const { localParticipant } = useLocalParticipant()
+
+  // Use provided hover state or local fallback
+  const currentHoveredAuthor = hoveredAuthor !== undefined ? hoveredAuthor : localHoveredAuthor
+  const setCurrentHoveredAuthor = setHoveredAuthor || setLocalHoveredAuthor
 
   const chatOptions = useMemo(() => {
     return { messageDecoder, messageEncoder, channelTopic }
@@ -135,8 +141,10 @@ export const Chat = forwardRef(function Chat({
                 children({ entry: msg, key: msg.id ?? idx, messageFormatter })
               )
             : chatMessages.map((msg, idx, allMsg) => {
-                const hideName = idx >= 1 && allMsg[idx - 1].from === msg.from
-                const hideTimestamp = idx >= 1 && msg.timestamp - allMsg[idx - 1].timestamp < 60_000
+                // System messages should never hide name/timestamp
+                const isSystemMessage = msg.isSystemMessage || msg.from?.identity === 'system'
+                const hideName = !isSystemMessage && idx >= 1 && allMsg[idx - 1].from?.identity === msg.from?.identity
+                const hideTimestamp = !isSystemMessage && idx >= 1 && msg.timestamp - allMsg[idx - 1].timestamp < 60_000
 
                 const participantColor = getParticipantColor(msg.from?.identity)
                 const isOwnMessage = msg.from?.identity === localParticipant?.identity
@@ -148,9 +156,9 @@ export const Chat = forwardRef(function Chat({
                     hideTimestamp={hideName === false ? false : hideTimestamp}
                     entry={msg}
                     messageFormatter={messageFormatter}
-                    onMouseEnter={() => setHoveredAuthor(msg.from?.identity)}
-                    onMouseLeave={() => setHoveredAuthor(null)}
-                    isAuthorHovered={hoveredAuthor === msg.from?.identity}
+                    onMouseEnter={() => setCurrentHoveredAuthor(msg.from?.identity)}
+                    onMouseLeave={() => setCurrentHoveredAuthor(null)}
+                    isAuthorHovered={currentHoveredAuthor === msg.from?.identity}
                     participantColor={isOwnMessage ? 'white' : participantColor}
                   />
                 )

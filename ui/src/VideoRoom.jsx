@@ -14,7 +14,7 @@ import { Chat, formatChatMessageLinks, Settings, ControlBar, HoldToTalk } from '
 import { CustomParticipantTile } from './components/CustomParticipantTile'
 import { StreamParticipantTile } from './components/StreamParticipantTile'
 import Timeline from './components/Timeline'
-import { Track } from 'livekit-client'
+import { Track, RoomEvent } from 'livekit-client'
 import { getRoomFromToken, getParticipantFromToken } from './utils'
 import { getParticipantColor } from './utils/participantColors'
 import { useState, useRef, useEffect } from 'react'
@@ -147,6 +147,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
   const [showSettings, setShowSettings] = useState(false)
   const [isVideoPoppedOut, setIsVideoPoppedOut] = useState(false)
   const [participantVolumes, setParticipantVolumes] = useState(new Map())
+  const [hoveredAuthor, setHoveredAuthor] = useState(null)
   const chatRef = useRef(null)
   const isResizing = useRef(false)
   const isVerticalResizing = useRef(false)
@@ -207,7 +208,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
         console.log('✏️ Successfully set display name metadata:', displayName)
 
         // Manually trigger metadata change event since local participant doesn't always emit it
-        room.emit('participantMetadataChanged', metadata, room.localParticipant)
+        room.emit(RoomEvent.ParticipantMetadataChanged, metadata, room.localParticipant)
         console.log('🔄 Manually triggered participantMetadataChanged event with metadata:', metadata)
       } catch (error) {
         console.error('Failed to set participant metadata:', error)
@@ -673,19 +674,24 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             padding: '5px'
           }}>
             {/* Local participant */}
-            <div style={{
-              padding: '5px 10px',
-              borderRadius: '4px',
-              marginBottom: '2px',
-              background: 'rgba(255, 255, 255, 0.15)', // Use white with alpha for consistency
-              borderLeft: '3px solid white',
-              paddingLeft: '8px',
-              fontSize: '14px',
-              color: '#fff',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px'
-            }}>
+            <div 
+              style={{
+                padding: '5px 10px',
+                borderRadius: '4px',
+                marginBottom: '2px',
+                background: hoveredAuthor === localParticipant?.identity ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)', // Use white with alpha for consistency
+                borderLeft: '3px solid white',
+                paddingLeft: '8px',
+                fontSize: '14px',
+                color: '#fff',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                cursor: 'pointer'
+              }}
+              onMouseEnter={() => setHoveredAuthor(localParticipant?.identity)}
+              onMouseLeave={() => setHoveredAuthor(null)}
+            >
               <span style={{ flex: '0 0 75%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                 {getDisplayName(localParticipant) || 'You'} (You)
               </span>
@@ -715,19 +721,27 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
               .map((participant) => {
                 const participantColor = getParticipantColor(participant.identity)
                 return (
-                <div key={participant.identity} style={{
-                  padding: '5px 10px',
-                  borderRadius: '4px',
-                  marginBottom: '2px',
-                  background: participantColor ? `${participantColor}15` : 'rgba(255, 255, 255, 0.05)', // Use participant color with alpha
-                  borderLeft: participantColor ? `3px solid ${participantColor}` : undefined,
-                  paddingLeft: participantColor ? '8px' : undefined,
-                  fontSize: '14px',
-                  color: '#fff',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px'
-                }}>
+                <div 
+                  key={participant.identity} 
+                  style={{
+                    padding: '5px 10px',
+                    borderRadius: '4px',
+                    marginBottom: '2px',
+                    background: hoveredAuthor === participant.identity 
+                      ? (participantColor ? `${participantColor}25` : 'rgba(255, 255, 255, 0.15)')
+                      : (participantColor ? `${participantColor}15` : 'rgba(255, 255, 255, 0.05)'), // Use participant color with alpha
+                    borderLeft: participantColor ? `3px solid ${participantColor}` : undefined,
+                    paddingLeft: participantColor ? '8px' : undefined,
+                    fontSize: '14px',
+                    color: '#fff',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}
+                  onMouseEnter={() => setHoveredAuthor(participant.identity)}
+                  onMouseLeave={() => setHoveredAuthor(null)}
+                >
                   <span style={{ flex: '0 0 75%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {getDisplayName(participant)}
                   </span>
@@ -776,6 +790,8 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             ref={chatRef}
             style={{ height: '100%', width: '100%', display: 'flex', flexDirection: 'column' }}
             messageFormatter={formatChatMessageLinks}
+            hoveredAuthor={hoveredAuthor}
+            setHoveredAuthor={setHoveredAuthor}
           />
         </div>
 

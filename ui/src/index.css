@@ -46,6 +46,11 @@ body {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
+.lk-chat-system-message {
+  margin: 2px 0 !important;
+  padding: 2px 0 !important;
+}
+
 .lk-participant-name {
   padding-top: 0 !important;
   margin-top: 0 !important;
