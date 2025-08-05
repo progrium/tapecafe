@@ -8,6 +8,7 @@ LINK_BIN 		?= /usr/local/bin
 DIST_DIR		?= .local/dist
 DIST_OS			?= darwin windows linux
 DIST_ARCH		?= arm64 amd64
+DOCKER_CMD 		?= $(shell command -v podman || command -v docker)
 
 ## Link/install the local binary
 link:
@@ -22,6 +23,16 @@ build: ui/dist
 		-o .local/bin/$(NAME) \
 		./cmd/$(NAME)
 .PHONY: build
+
+## Build Docker image
+docker:
+	$(DOCKER_CMD) build -t tapecafe .
+.PHONY: build-docker
+
+## Build UI
+ui:
+	cd ui && npm run build
+.PHONY: ui
 
 ## Clean
 clean:
