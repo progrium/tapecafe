@@ -56,6 +56,12 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
     console.log('✅ Successfully connected to room:', room?.name || roomName || 'Unknown')
     console.log('🎥 Track pre-acquisition will happen when localParticipant is ready')
     const stateFeed = new WebSocket(`${url}/state`)
+    stateFeed.onerror = (error) => {
+      console.error('🚫 State connection error:', error);
+    }
+    stateFeed.onopen = () => {
+      console.log('🔄 State connection opened')
+    }
     let linger = false
     let lastStatus = ""
     stateFeed.onmessage = (event) => {
