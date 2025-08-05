@@ -21,5 +21,6 @@ const (
 	StatusFwd      Status = "⏭ FWD"
 	StatusBack     Status = "⏮ BACK"
 	StatusFinished Status = "⏏ EJECT"
+	StatusLive     Status = "⏺ LIVE FEED"
 	StatusError    Status = "! ERROR"
 )

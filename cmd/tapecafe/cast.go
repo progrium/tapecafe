@@ -11,18 +11,20 @@ import (
 )
 
 func castCmd() *cli.Command {
+	var (
+		title string
+	)
 	cmd := &cli.Command{
-		Usage: "cast <server-url> <filename> [title]",
+		Usage: "cast <server-url> [filename]",
 		// Short: "",
-		Args: cli.MinArgs(2),
+		Args: cli.MinArgs(1),
 		Run: func(ctx *cli.Context, args []string) {
 			var (
 				serverURL = args[0]
-				filename  = args[1]
-				title     = ""
+				filename  = ""
 			)
-			if len(args) > 2 {
-				title = args[2]
+			if len(args) > 1 {
+				filename = args[1]
 			}
 
 			session, err := caster.New(serverURL, filename, title)
@@ -43,5 +45,6 @@ func castCmd() *cli.Command {
 			}
 		},
 	}
+	cmd.Flags().StringVar(&title, "title", "", "title to use for the session")
 	return cmd
 }

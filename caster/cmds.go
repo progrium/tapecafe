@@ -8,6 +8,9 @@ import (
 )
 
 func cmds(sess *Session) map[string]func([]string) error {
+	if sess.Filename == "" {
+		return map[string]func([]string) error{}
+	}
 	slashPlaySeek := func(args []string) error {
 		startTime := sess.State.Position
 		if len(args) > 0 {

@@ -74,7 +74,7 @@ func New(serverURL, filename, title string) (*Session, error) {
 		return nil, err
 	}
 
-	if title == "" {
+	if title == "" && filename != "" {
 		title = filepath.Base(filename)
 	}
 
@@ -99,10 +99,6 @@ func (s *Session) Start() error {
 		return fmt.Errorf("session already started")
 	}
 
-	if err := s.loadFile(); err != nil {
-		return err
-	}
-
 	if err := s.setupIngress(); err != nil {
 		return err
 	}
@@ -111,13 +107,19 @@ func (s *Session) Start() error {
 		return err
 	}
 
-	go s.handleProgress()
+	if s.Filename != "" {
+		if err := s.loadFile(); err != nil {
+			return err
+		}
+		go s.handleProgress()
+		return s.setStatus(StatusReady)
+	}
 
-	return s.setStatus(StatusReady)
+	// Pre-live feed with no file we'll be "playing" (no status)
+	return s.setStatus(StatusPlaying)
 }
 
 func (s *Session) Shutdown() error {
-
 	return s.rpc.Close()
 }
 
@@ -199,26 +201,43 @@ func (s *Session) setupIngress() error {
 	ingressURL.Path = "/cast/ingress"
 	s.mu.Unlock()
 
+	log.Println("ingress:", s.LocalIngress.String())
+
 	go func() {
+		var (
+			ws *websocket.Conn
+		)
 		for {
 			conn, err := l.Accept()
 			if err != nil {
 				log.Fatal("ingress:", err)
 			}
-			c, err := websocket.Dial(ingressURL.String(), "", s.ServerURL.String())
+			if ws != nil {
+				ws.Close()
+			}
+			ws, err = websocket.Dial(ingressURL.String(), "", s.ServerURL.String())
 			if err != nil {
 				log.Fatal("ingress:", err)
 			}
+			s.mu.Lock()
+			if s.Filename == "" && s.State.Status == StatusPlaying {
+				s.State.Status = StatusLive
+				s.State.Position = ffmpeg.FormatTimeMs(0)
+				s.State.PositionMs = 0
+			}
+			s.mu.Unlock()
+			s.sendState()
+
 			go func() {
-				_, err := io.Copy(c, conn)
+				_, err := io.Copy(ws, conn)
 				if err != nil {
-					log.Fatal("ingress:", err)
+					log.Println("ingress:", err)
 				}
 			}()
 			go func() {
-				_, err := io.Copy(conn, c)
+				_, err := io.Copy(conn, ws)
 				if err != nil {
-					log.Fatal("ingress:", err)
+					log.Println("ingress:", err)
 				}
 			}()
 		}
