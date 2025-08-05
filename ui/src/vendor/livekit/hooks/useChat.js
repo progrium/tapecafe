@@ -24,9 +24,10 @@ function getDisplayName(participant) {
 export function useChat(options) {
   const room = useRoomContext()
   const { chatMessages: originalMessages, send, isSending } = useOriginalChat(options)
-  const [systemMessages, setSystemMessages] = useState([])
+  const [allMessages, setAllMessages] = useState([])
   const messageIdCounter = useRef(0)
   const participantNames = useRef(new Map()) // Track previous names
+  const processedMessageIds = useRef(new Set()) // Track which original messages we've already added
 
   useEffect(() => {
     if (!room) return
@@ -44,7 +45,7 @@ export function useChat(options) {
           from: { identity: 'system', name: 'System', isLocal: false },
           isSystemMessage: true
         }
-        setSystemMessages(prev => [...prev, localJoinMessage])
+        setAllMessages(prev => [...prev, localJoinMessage])
       }
     }
 
@@ -60,7 +61,7 @@ export function useChat(options) {
         from: { identity: 'system', name: 'System', isLocal: false },
         isSystemMessage: true
       }
-      setSystemMessages(prev => [...prev, systemMessage])
+      setAllMessages(prev => [...prev, systemMessage])
     }
 
     const handleParticipantDisconnected = (participant) => {
@@ -75,7 +76,7 @@ export function useChat(options) {
         from: { identity: 'system', name: 'System', isLocal: false },
         isSystemMessage: true
       }
-      setSystemMessages(prev => [...prev, systemMessage])
+      setAllMessages(prev => [...prev, systemMessage])
     }
 
     const handleParticipantMetadataChanged = (metadata, participant) => {
@@ -104,7 +105,7 @@ export function useChat(options) {
           from: { identity: 'system', name: 'System', isLocal: false },
           isSystemMessage: true
         }
-        setSystemMessages(prev => [...prev, systemMessage])
+        setAllMessages(prev => [...prev, systemMessage])
         
         // Update tracked name
         participantNames.current.set(actualParticipant.identity, newName)
@@ -131,8 +132,25 @@ export function useChat(options) {
     }
   }, [room])
 
-  // Merge original messages with system messages and sort by timestamp
-  const chatMessages = [...originalMessages, ...systemMessages].sort((a, b) => a.timestamp - b.timestamp)
+  // Add new original messages to the combined list as they arrive
+  useEffect(() => {
+    // Find messages we haven't processed yet
+    const newMessages = originalMessages.filter(msg => {
+      const msgId = msg.id || `${msg.from?.identity}-${msg.timestamp}`
+      return !processedMessageIds.current.has(msgId)
+    })
+    
+    if (newMessages.length > 0) {
+      // Mark these messages as processed
+      newMessages.forEach(msg => {
+        const msgId = msg.id || `${msg.from?.identity}-${msg.timestamp}`
+        processedMessageIds.current.add(msgId)
+      })
+      
+      // Append new messages to the end
+      setAllMessages(prev => [...prev, ...newMessages])
+    }
+  }, [originalMessages])
 
-  return { chatMessages, send, isSending }
+  return { chatMessages: allMessages, send, isSending }
 }
