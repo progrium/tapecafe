@@ -3,6 +3,8 @@ import { useChat } from '../hooks/useChat'
 import { ChatEntry } from './ChatEntry'
 import { formatChatMessageLinks } from './ChatEntry'
 import { ParticipantNamesProvider } from '../context/ParticipantNamesContext'
+import { getParticipantColor } from '../../../utils/participantColors'
+import { useLocalParticipant } from '@livekit/components-react'
 
 export const Chat = forwardRef(function Chat({
   messageFormatter,
@@ -18,6 +20,7 @@ export const Chat = forwardRef(function Chat({
   const [justSentMessage, setJustSentMessage] = useState(false)
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false)
   const [hoveredAuthor, setHoveredAuthor] = useState(null)
+  const { localParticipant } = useLocalParticipant()
 
   const chatOptions = useMemo(() => {
     return { messageDecoder, messageEncoder, channelTopic }
@@ -135,6 +138,9 @@ export const Chat = forwardRef(function Chat({
                 const hideName = idx >= 1 && allMsg[idx - 1].from === msg.from
                 const hideTimestamp = idx >= 1 && msg.timestamp - allMsg[idx - 1].timestamp < 60_000
 
+                const participantColor = getParticipantColor(msg.from?.identity)
+                const isOwnMessage = msg.from?.identity === localParticipant?.identity
+                
                 return (
                   <ChatEntry
                     key={msg.id ?? idx}
@@ -145,6 +151,7 @@ export const Chat = forwardRef(function Chat({
                     onMouseEnter={() => setHoveredAuthor(msg.from?.identity)}
                     onMouseLeave={() => setHoveredAuthor(null)}
                     isAuthorHovered={hoveredAuthor === msg.from?.identity}
+                    participantColor={isOwnMessage ? null : participantColor}
                   />
                 )
               })}

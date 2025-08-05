@@ -16,6 +16,7 @@ import { StreamParticipantTile } from './components/StreamParticipantTile'
 import Timeline from './components/Timeline'
 import { Track } from 'livekit-client'
 import { getRoomFromToken, getParticipantFromToken } from './utils'
+import { getParticipantColor } from './utils/participantColors'
 import { useState, useRef, useEffect } from 'react'
 
 // Helper function to extract display name from participant metadata
@@ -714,7 +715,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                   padding: '5px 10px',
                   borderRadius: '4px',
                   marginBottom: '2px',
-                  background: 'rgba(255, 255, 255, 0.05)', // Subtle dark background
+                  background: getParticipantColor(participant.identity) ? `${getParticipantColor(participant.identity)}20` : 'rgba(255, 255, 255, 0.05)', // Use participant color with alpha
                   fontSize: '14px',
                   color: '#fff',
                   display: 'flex',

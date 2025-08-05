@@ -3,7 +3,7 @@ import { tokenize, createDefaultGrammar } from '@livekit/components-core'
 import { useParticipantNames } from '../context/ParticipantNamesContext'
 
 export const ChatEntry = forwardRef(function ChatEntry(
-  { entry, hideName = false, hideTimestamp = false, messageFormatter, onMouseEnter, onMouseLeave, isAuthorHovered = false, ...props },
+  { entry, hideName = false, hideTimestamp = false, messageFormatter, onMouseEnter, onMouseLeave, isAuthorHovered = false, participantColor = null, ...props },
   ref
 ) {
   const { getParticipantDisplayName } = useParticipantNames()
@@ -53,6 +53,12 @@ export const ChatEntry = forwardRef(function ChatEntry(
       className={`lk-chat-entry ${isAuthorHovered ? 'same-author-hover' : ''}`}
       title={time.toLocaleTimeString(locale, { timeStyle: 'full' })}
       data-lk-message-origin={entry.from?.isLocal ? 'local' : 'remote'}
+      style={{
+        backgroundColor: participantColor ? `${participantColor}15` : undefined,
+        borderLeft: participantColor ? `3px solid ${participantColor}` : undefined,
+        paddingLeft: participantColor ? '8px' : undefined,
+        ...props.style
+      }}
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
       {...props}
