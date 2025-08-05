@@ -1,3 +1,34 @@
+:root {
+  /* Color System */
+  --bg-dark: rgb(29.75, 29.75, 29.75);
+  --text-primary: #fff;
+  --text-muted: #888;
+  --overlay-light: rgba(255, 255, 255, 0.05);
+  --overlay-medium: rgba(255, 255, 255, 0.15);
+  --overlay-strong: rgba(255, 255, 255, 0.25);
+  --overlay-dark: rgba(0, 0, 0, 0.8);
+  --border-color: rgba(255, 255, 255, 0.1);
+  
+  /* Spacing System */
+  --space-xs: 2px;
+  --space-sm: 4px;
+  --space-md: 8px;
+  --space-lg: 10px;
+  --space-xl: 16px;
+  
+  /* Component Sizing */
+  --border-radius: 4px;
+  --border-accent-width: 3px;
+  
+  /* Typography */
+  --font-size-tiny: 8px;
+  --font-size-small: 10px;
+  --font-size-normal: 14px;
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease;
+}
+
 * {
   box-sizing: border-box;
 }
@@ -34,21 +65,21 @@ body {
 
 /* Chat message hover effects */
 .lk-chat-entry {
-  transition: background-color 0.2s ease;
-  padding-bottom: 4px;
+  transition: background-color var(--transition-fast);
+  padding-bottom: var(--space-sm);
 }
 
 .lk-chat-entry:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--overlay-light);
 }
 
 .lk-chat-entry.same-author-hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--overlay-light);
 }
 
 .lk-chat-system-message {
-  margin: 2px 0 !important;
-  padding: 2px 0 !important;
+  margin: var(--space-xs) 0 !important;
+  padding: var(--space-xs) 0 !important;
 }
 
 .lk-participant-name {
@@ -62,8 +93,8 @@ body {
 .lk-chat-form {
   display: flex !important;
   width: 100% !important;
-  padding: 0.5rem !important;
-  gap: 0.5rem !important;
+  padding: var(--space-md) !important;
+  gap: var(--space-md) !important;
 }
 
 .lk-chat-form-input {
@@ -74,6 +105,88 @@ body {
 
 .lk-chat-form-button {
   flex-shrink: 0 !important;
+}
+
+/* Utility Classes */
+.flex {
+  display: flex;
+}
+
+.flex-col {
+  flex-direction: column;
+}
+
+.items-center {
+  align-items: center;
+}
+
+.justify-center {
+  justify-content: center;
+}
+
+.gap-sm {
+  gap: var(--space-sm);
+}
+
+.gap-md {
+  gap: var(--space-md);
+}
+
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transition-bg {
+  transition: background-color var(--transition-fast);
+}
+
+/* Participant Entry Components */
+.participant-entry {
+  padding: var(--space-lg) var(--space-lg);
+  border-radius: var(--border-radius);
+  margin-bottom: var(--space-xs);
+  font-size: var(--font-size-normal);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.participant-entry--local {
+  background: var(--overlay-medium);
+  border-left: var(--border-accent-width) solid white;
+  padding-left: var(--space-md);
+}
+
+.participant-entry--local:hover,
+.participant-entry--local.is-hovered {
+  background: var(--overlay-strong);
+}
+
+.participant-entry--remote {
+  background: var(--overlay-light);
+}
+
+.participant-entry--remote:hover,
+.participant-entry--remote.is-hovered {
+  background: var(--overlay-medium);
+}
+
+.volume-control {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: var(--font-size-small);
+}
+
+.volume-slider {
+  width: 80px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 1px;
+  outline: none;
+  cursor: pointer;
 }
 
 /* Make settings modal fit content instead of 50vh/50vw */

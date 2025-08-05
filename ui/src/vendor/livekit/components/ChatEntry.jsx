@@ -24,14 +24,7 @@ export const ChatEntry = forwardRef(function ChatEntry(
     ? getParticipantDisplayName(entry.from.identity)
     : (entry.from?.name ?? entry.from?.identity)
 
-  // Debug logging for chat names
-  console.log('💬 ChatEntry render:', {
-    identity: entry.from?.identity,
-    participantDisplayName,
-    originalName: entry.from?.name,
-    message: entry.message?.substring(0, 50)
-  })
-  const name = entry.from?.name ?? entry.from?.identity
+  // Clean up - debug logging removed
 
   // System messages have a simpler structure
   if (isSystemMessage) {

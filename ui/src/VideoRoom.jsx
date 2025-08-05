@@ -675,28 +675,17 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
           }}>
             {/* Local participant */}
             <div 
-              style={{
-                padding: '5px 10px',
-                borderRadius: '4px',
-                marginBottom: '2px',
-                background: hoveredAuthor === localParticipant?.identity ? 'rgba(255, 255, 255, 0.25)' : 'rgba(255, 255, 255, 0.15)', // Use white with alpha for consistency
-                borderLeft: '3px solid white',
-                paddingLeft: '8px',
-                fontSize: '14px',
-                color: '#fff',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                cursor: 'pointer'
-              }}
+              className={`participant-entry participant-entry--local flex items-center gap-md ${
+                hoveredAuthor === localParticipant?.identity ? 'is-hovered' : ''
+              }`}
               onMouseEnter={() => setHoveredAuthor(localParticipant?.identity)}
               onMouseLeave={() => setHoveredAuthor(null)}
             >
-              <span style={{ flex: '0 0 75%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span className="text-ellipsis" style={{ flex: '0 0 75%' }}>
                 {getDisplayName(localParticipant) || 'You'} (You)
               </span>
-              <div style={{ flex: '0 0 25%', maxWidth: '400px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
-                <span style={{ fontSize: '8px' }}>🔊</span>
+              <div className="volume-control" style={{ flex: '0 0 25%', maxWidth: '400px' }}>
+                <span style={{ fontSize: 'var(--font-size-tiny)' }}>🔊</span>
                 <input
                   type="range"
                   min="0"
@@ -704,14 +693,8 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                   step="0.1"
                   value={getParticipantVolume(localParticipant?.identity || 'local')}
                   onChange={(e) => updateParticipantVolume(localParticipant?.identity || 'local', parseFloat(e.target.value))}
-                  style={{
-                    width: '100%',
-                    height: '2px',
-                    background: 'rgba(255, 255, 255, 0.3)',
-                    borderRadius: '1px',
-                    outline: 'none',
-                    cursor: 'pointer'
-                  }}
+                  className="volume-slider"
+                  style={{ width: '100%' }}
                 />
               </div>
             </div>
@@ -720,33 +703,32 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
               .filter(participant => participant.identity !== localParticipant?.identity)
               .map((participant) => {
                 const participantColor = getParticipantColor(participant.identity)
+                const isHovered = hoveredAuthor === participant.identity
+                
+                // Create style object for this participant
+                const participantStyle = {
+                  background: isHovered 
+                    ? (participantColor ? `${participantColor}25` : undefined)
+                    : (participantColor ? `${participantColor}15` : undefined),
+                  borderLeft: participantColor ? `var(--border-accent-width) solid ${participantColor}` : undefined,
+                  paddingLeft: participantColor ? 'var(--space-md)' : undefined,
+                }
+                
                 return (
                 <div 
-                  key={participant.identity} 
-                  style={{
-                    padding: '5px 10px',
-                    borderRadius: '4px',
-                    marginBottom: '2px',
-                    background: hoveredAuthor === participant.identity 
-                      ? (participantColor ? `${participantColor}25` : 'rgba(255, 255, 255, 0.15)')
-                      : (participantColor ? `${participantColor}15` : 'rgba(255, 255, 255, 0.05)'), // Use participant color with alpha
-                    borderLeft: participantColor ? `3px solid ${participantColor}` : undefined,
-                    paddingLeft: participantColor ? '8px' : undefined,
-                    fontSize: '14px',
-                    color: '#fff',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    cursor: 'pointer'
-                  }}
+                  key={participant.identity}
+                  className={`participant-entry participant-entry--remote flex items-center gap-md ${
+                    isHovered ? 'is-hovered' : ''
+                  }`}
+                  style={participantStyle}
                   onMouseEnter={() => setHoveredAuthor(participant.identity)}
                   onMouseLeave={() => setHoveredAuthor(null)}
                 >
-                  <span style={{ flex: '0 0 75%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <span className="text-ellipsis" style={{ flex: '0 0 75%' }}>
                     {getDisplayName(participant)}
                   </span>
-                  <div style={{ flex: '0 0 25%', maxWidth: '400px', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '10px' }}>
-                    <span style={{ fontSize: '8px' }}>🔊</span>
+                  <div className="volume-control" style={{ flex: '0 0 25%', maxWidth: '400px' }}>
+                    <span style={{ fontSize: 'var(--font-size-tiny)' }}>🔊</span>
                     <input
                       type="range"
                       min="0"
@@ -754,14 +736,8 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                       step="0.1"
                       value={getParticipantVolume(participant.identity)}
                       onChange={(e) => updateParticipantVolume(participant.identity, parseFloat(e.target.value))}
-                      style={{
-                        width: '100%',
-                        height: '2px',
-                        background: 'rgba(255, 255, 255, 0.3)',
-                        borderRadius: '1px',
-                        outline: 'none',
-                        cursor: 'pointer'
-                      }}
+                      className="volume-slider"
+                      style={{ width: '100%' }}
                     />
                   </div>
                 </div>
