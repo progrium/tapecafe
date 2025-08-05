@@ -31,6 +31,19 @@ body {
   white-space: pre-wrap;
 }
 
+/* Chat message hover effects */
+.lk-chat-entry {
+  transition: background-color 0.2s ease;
+}
+
+.lk-chat-entry:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.lk-chat-entry.same-author-hover {
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
 /* Chat header is now styled inline in the component */
 
 /* Make chat form responsive */

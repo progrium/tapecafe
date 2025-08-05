@@ -17,6 +17,7 @@ export const Chat = forwardRef(function Chat({
   const [wasAtBottom, setWasAtBottom] = useState(true)
   const [justSentMessage, setJustSentMessage] = useState(false)
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false)
+  const [hoveredAuthor, setHoveredAuthor] = useState(null)
 
   const chatOptions = useMemo(() => {
     return { messageDecoder, messageEncoder, channelTopic }
@@ -141,6 +142,9 @@ export const Chat = forwardRef(function Chat({
                     hideTimestamp={hideName === false ? false : hideTimestamp}
                     entry={msg}
                     messageFormatter={messageFormatter}
+                    onMouseEnter={() => setHoveredAuthor(msg.from?.identity)}
+                    onMouseLeave={() => setHoveredAuthor(null)}
+                    isAuthorHovered={hoveredAuthor === msg.from?.identity}
                   />
                 )
               })}
