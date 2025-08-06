@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { MediaDeviceMenu } from '@livekit/components-react'
 import { useRoomContext } from '@livekit/components-react'
 
@@ -61,7 +61,7 @@ export function Settings({ onClose }) {
   }
 
   // Auto-save display name when closing
-  const handleClose = async () => {
+  const handleClose = useCallback(async () => {
     if (room?.localParticipant && displayName.trim()) {
       try {
         const metadata = JSON.stringify({ displayName: displayName.trim() })
@@ -82,7 +82,22 @@ export function Settings({ onClose }) {
     if (onClose) {
       onClose()
     }
-  }
+  }, [room, displayName, onClose])
+
+  // Handle escape key to close modal
+  useEffect(() => {
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape') {
+        handleClose()
+      }
+    }
+
+    document.addEventListener('keydown', handleEscapeKey)
+
+    return () => {
+      document.removeEventListener('keydown', handleEscapeKey)
+    }
+  }, [handleClose])
 
   return (
     <div style={{
