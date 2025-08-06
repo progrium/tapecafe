@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { MediaDeviceMenu } from '@livekit/components-react'
 import { useRoomContext } from '@livekit/components-react'
 
@@ -17,20 +17,47 @@ export function Settings({ onClose }) {
     return ''
   })
 
+  const [devices, setDevices] = useState({ cameras: [], microphones: [] })
+  const [selectedCamera, setSelectedCamera] = useState(() => localStorage.getItem('selectedCamera') || '')
+  const [selectedMicrophone, setSelectedMicrophone] = useState(() => localStorage.getItem('selectedMicrophone') || '')
+
+  // Get available devices
+  useEffect(() => {
+    async function getDevices() {
+      try {
+        const deviceList = await navigator.mediaDevices.enumerateDevices()
+        const cameras = deviceList.filter(device => device.kind === 'videoinput')
+        const microphones = deviceList.filter(device => device.kind === 'audioinput')
+        setDevices({ cameras, microphones })
+      } catch (error) {
+        console.error('Error getting devices:', error)
+      }
+    }
+    getDevices()
+  }, [])
+
   // Handle device changes - update localStorage and refresh tracks if needed
   const handleDeviceChange = (kind, deviceId) => {
     console.log('🔄 Device changed in settings:', kind, deviceId)
     
     if (kind === 'videoinput') {
       localStorage.setItem('selectedCamera', deviceId)
+      setSelectedCamera(deviceId)
     } else if (kind === 'audioinput') {
       localStorage.setItem('selectedMicrophone', deviceId)
+      setSelectedMicrophone(deviceId)
     }
     
     // Refresh video tracks if currently active
     if (window._refreshVideoTracks) {
       window._refreshVideoTracks()
     }
+  }
+
+  // Get device name by ID
+  const getDeviceName = (devices, deviceId) => {
+    const device = devices.find(d => d.deviceId === deviceId)
+    return device?.label || 'Default'
   }
 
   const handleDisplayNameSubmit = async (e) => {
@@ -56,12 +83,13 @@ export function Settings({ onClose }) {
 
   return (
     <div style={{
-      padding: '0.75rem',
+      padding: '1.5rem',
       width: 'fit-content',
-      minWidth: '250px',
+      minWidth: '320px',
       backgroundColor: 'var(--lk-bg2)',
       color: 'var(--lk-fg)',
-      borderRadius: 'var(--lk-border-radius)'
+      borderRadius: '12px',
+      boxShadow: '0 8px 32px rgba(0, 0, 0, 0.4)'
     }}>
       <div style={{
         display: 'flex',
@@ -138,27 +166,95 @@ export function Settings({ onClose }) {
       </div>
 
       {/* Audio Device Section */}
-      <div style={{ marginBottom: '1rem' }}>
-        <h4 style={{
-          margin: '0 0 0.5rem 0',
-          fontSize: '0.9rem',
-          color: 'var(--lk-fg3)'
+      <div style={{ 
+        marginBottom: '1.5rem',
+        padding: '1rem',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: '8px',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginBottom: '0.75rem'
         }}>
-          Microphone
-        </h4>
-        <MediaDeviceMenu kind="audioinput" onActiveDeviceChange={handleDeviceChange} />
+          <span style={{ fontSize: '1.1rem' }}>🎤</span>
+          <h4 style={{
+            margin: 0,
+            fontSize: '0.95rem',
+            fontWeight: '600',
+            color: 'var(--lk-fg)'
+          }}>
+            Microphone
+          </h4>
+        </div>
+        <select
+          value={selectedMicrophone}
+          onChange={(e) => handleDeviceChange('audioinput', e.target.value)}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: 'var(--lk-control-bg)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '6px',
+            color: 'var(--lk-fg)',
+            fontSize: '0.875rem',
+            cursor: 'pointer'
+          }}
+        >
+          {devices.microphones.map(mic => (
+            <option key={mic.deviceId} value={mic.deviceId}>
+              {mic.label || `Microphone ${mic.deviceId.substr(0, 8)}`}
+            </option>
+          ))}
+        </select>
       </div>
 
       {/* Video Device Section */}
-      <div style={{ marginBottom: '0.5rem' }}>
-        <h4 style={{
-          margin: '0 0 0.5rem 0',
-          fontSize: '0.9rem',
-          color: 'var(--lk-fg3)'
+      <div style={{ 
+        marginBottom: '1rem',
+        padding: '1rem',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: '8px',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginBottom: '0.75rem'
         }}>
-          Camera
-        </h4>
-        <MediaDeviceMenu kind="videoinput" onActiveDeviceChange={handleDeviceChange} />
+          <span style={{ fontSize: '1.1rem' }}>📷</span>
+          <h4 style={{
+            margin: 0,
+            fontSize: '0.95rem',
+            fontWeight: '600',
+            color: 'var(--lk-fg)'
+          }}>
+            Camera
+          </h4>
+        </div>
+        <select
+          value={selectedCamera}
+          onChange={(e) => handleDeviceChange('videoinput', e.target.value)}
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: 'var(--lk-control-bg)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '6px',
+            color: 'var(--lk-fg)',
+            fontSize: '0.875rem',
+            cursor: 'pointer'
+          }}
+        >
+          {devices.cameras.map(camera => (
+            <option key={camera.deviceId} value={camera.deviceId}>
+              {camera.label || `Camera ${camera.deviceId.substr(0, 8)}`}
+            </option>
+          ))}
+        </select>
       </div>
     </div>
   )
