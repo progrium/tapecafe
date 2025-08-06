@@ -46,6 +46,9 @@ func cmds(sess *Session) map[string]func([]string) error {
 	slashPause := func(args []string) error {
 		return sess.pause()
 	}
+	slashStop := func(args []string) error {
+		return sess.stop()
+	}
 	slashBack := func(args []string) error {
 		if err := sess.FFmpeg.Stop(); err != nil {
 			sess.setStatus(StatusError)
@@ -108,5 +111,7 @@ func cmds(sess *Session) map[string]func([]string) error {
 		"/forward": slashForward,
 		"/yt":      slashYouTube,
 		"/youtube": slashYouTube,
+		"/stop":    slashStop,
+		"/eject":   slashStop,
 	}
 }

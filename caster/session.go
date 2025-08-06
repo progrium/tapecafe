@@ -327,3 +327,17 @@ func (s *Session) pause() error {
 	}
 	return s.setStatus(StatusPaused)
 }
+
+func (s *Session) stop() error {
+	if err := s.FFmpeg.Stop(); err != nil {
+		s.setStatus(StatusError)
+		return err
+	}
+	s.mu.Lock()
+	s.Filename = ""
+	s.State.Title = ""
+	s.State.Position = ffmpeg.FormatTimeMs(0)
+	s.State.PositionMs = 0
+	s.mu.Unlock()
+	return s.setStatus(StatusFinished)
+}
