@@ -882,7 +882,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             justifyContent: 'center',
             padding: '10px'
           }}>
-            <HoldToTalk disabled={isPushToTalkDisabled()} />
+            <HoldToTalk disabled={isPushToTalkDisabled()} playbackStatus={playbackStatus} />
           </div>
         </div>
       </div>
