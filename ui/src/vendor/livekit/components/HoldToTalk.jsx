@@ -113,11 +113,48 @@ export function HoldToTalk({ onDeviceError, disabled = false, playbackStatus, ..
   const refreshTracksIfNeeded = async () => {
     if (!isMicOn || isPublishing) return
     
-    console.log('🔄 Refreshing tracks with new device selection')
-    // Simply toggle off and on to use new devices
-    await toggleMic() // Turn off
-    // Small delay to ensure cleanup
-    setTimeout(() => toggleMic(), 100) // Turn back on with new devices
+    console.log('🔄 Refreshing tracks with new device selection while keeping video chat ON')
+    setIsPublishing(true)
+    
+    try {
+      // Get current publications
+      const videoPublication = localParticipant?.getTrackPublication('camera')
+      const audioPublication = localParticipant?.getTrackPublication('microphone')
+
+      // Unpublish current tracks
+      if (videoPublication) {
+        await localParticipant.unpublishTrack(videoPublication.track)
+      }
+      if (audioPublication) {
+        await localParticipant.unpublishTrack(audioPublication.track)
+      }
+
+      // Create new tracks with updated device selection
+      const { createLocalVideoTrack, createLocalAudioTrack } = await import('livekit-client')
+      
+      const selectedCamera = localStorage.getItem('selectedCamera')
+      const selectedMicrophone = localStorage.getItem('selectedMicrophone')
+      
+      console.log('📷 Refreshing with camera:', selectedCamera || 'default')
+      console.log('🎤 Refreshing with microphone:', selectedMicrophone || 'default')
+
+      // Create and publish new tracks
+      const videoOptions = selectedCamera ? { deviceId: { exact: selectedCamera } } : {}
+      const videoTrack = await createLocalVideoTrack(videoOptions)
+      await localParticipant.publishTrack(videoTrack)
+
+      const audioOptions = selectedMicrophone ? { deviceId: { exact: selectedMicrophone } } : {}
+      const audioTrack = await createLocalAudioTrack(audioOptions)
+      await localParticipant.publishTrack(audioTrack)
+
+      console.log('✅ Refreshed tracks - video chat stays ON')
+    } catch (error) {
+      console.error('Error refreshing tracks:', error)
+      // On error, turn off video chat to avoid broken state
+      setIsMicOn(false)
+    } finally {
+      setIsPublishing(false)
+    }
   }
 
   // Expose refresh function so Settings can call it
