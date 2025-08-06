@@ -40,6 +40,7 @@ function getDisplayName(participant) {
 function VideoRoom({ url, token, displayName, onDisconnect }) {
   const roomName = getRoomFromToken(token)
   const [streambotVolume, setStreambotVolume] = useState(1.0)
+  const [playbackStatus, setPlaybackStatus] = useState('')
 
   // Listen for volume changes from popup window
   useEffect(() => {
@@ -78,6 +79,10 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
         document.querySelector('#osd').textContent = update.Status;
       }
       lastStatus = update.Status
+      
+      // Update playback status
+      setPlaybackStatus(update.Status)
+      
       console.log('🔄 State message:', update.Status, update)
     }
     stateFeed.onerror = (error) => {
@@ -125,14 +130,14 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
         onDisconnected={handleDisconnected}
         onError={handleError}
       >
-        <RoomContent displayName={displayName} url={url} token={token} streambotVolume={streambotVolume} setStreambotVolume={setStreambotVolume} />
+        <RoomContent displayName={displayName} url={url} token={token} streambotVolume={streambotVolume} setStreambotVolume={setStreambotVolume} playbackStatus={playbackStatus} />
         <RoomAudioRenderer />
       </LiveKitRoom>
     </div>
   )
 }
 
-function RoomContent({ displayName, url, token, streambotVolume, setStreambotVolume }) {
+function RoomContent({ displayName, url, token, streambotVolume, setStreambotVolume, playbackStatus }) {
   const { localParticipant } = useLocalParticipant()
   const allParticipants = useParticipants()
   const room = useRoomContext()
@@ -141,6 +146,21 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
   const participants = allParticipants.filter(participant =>
     participant.identity !== 'streambot' && participant.identity !== 'chatbot'
   )
+
+  // Determine if push-to-talk should be disabled based on playback status
+  const isPushToTalkDisabled = () => {
+    // Only disable during actual playback states, not when there's no content
+    const disablingStatuses = ['Play', 'Playing', 'Forward', 'Back', 'Live feed']
+    
+    // Empty string means "Playing" - should disable
+    // But we need to handle the case where empty string might also mean "no content"
+    // Let's be more specific: only disable if we have a clear playback state
+    const shouldDisable = disablingStatuses.includes(playbackStatus) || 
+                         (playbackStatus === '' && document.querySelector('#osd')?.textContent !== '█ NO TAPE')
+    
+    console.log('🎙️ Playback status:', `"${playbackStatus}"`, 'OSD:', document.querySelector('#osd')?.textContent, 'Disabled:', shouldDisable)
+    return shouldDisable
+  }
   const [chatWidth, setChatWidth] = useState(300)
   const [participantsHeight, setParticipantsHeight] = useState(225)
   const [showSettings, setShowSettings] = useState(false)
@@ -862,7 +882,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             justifyContent: 'center',
             padding: '10px'
           }}>
-            <HoldToTalk />
+            <HoldToTalk disabled={isPushToTalkDisabled()} />
           </div>
         </div>
       </div>

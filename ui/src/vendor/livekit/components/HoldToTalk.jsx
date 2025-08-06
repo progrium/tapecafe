@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useRoomContext, useLocalParticipant } from '@livekit/components-react'
 
-export function HoldToTalk({ onDeviceError, ...props }) {
+export function HoldToTalk({ onDeviceError, disabled = false, ...props }) {
   const room = useRoomContext()
   const { localParticipant } = useLocalParticipant()
   const [isHolding, setIsHolding] = useState(false)
@@ -81,7 +81,9 @@ export function HoldToTalk({ onDeviceError, ...props }) {
   // Handle mouse events
   const handleMouseDown = (e) => {
     e.preventDefault()
-    startTalking()
+    if (!disabled) {
+      startTalking()
+    }
   }
 
   const handleMouseUp = (e) => {
@@ -92,7 +94,9 @@ export function HoldToTalk({ onDeviceError, ...props }) {
   // Handle touch events for mobile
   const handleTouchStart = (e) => {
     e.preventDefault()
-    startTalking()
+    if (!disabled) {
+      startTalking()
+    }
   }
 
   const handleTouchEnd = (e) => {
@@ -135,20 +139,21 @@ export function HoldToTalk({ onDeviceError, ...props }) {
       onMouseLeave={handleMouseLeave}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      disabled={isPublishing}
+      disabled={disabled || isPublishing}
       style={{
         padding: '0.625rem 1rem',
-        backgroundColor: isHolding ? '#ff4444' : 'rgba(255, 255, 255, 0.12)',
-        color: isHolding ? 'white' : 'var(--lk-control-fg)',
+        backgroundColor: disabled ? 'rgba(255, 255, 255, 0.05)' : (isHolding ? '#ff4444' : 'rgba(255, 255, 255, 0.12)'),
+        color: disabled ? '#666' : (isHolding ? 'white' : 'var(--lk-control-fg)'),
         border: 'none',
         borderRadius: 'var(--lk-border-radius)',
-        cursor: 'pointer',
+        cursor: disabled ? 'not-allowed' : 'pointer',
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
         transition: 'background-color 0.1s ease',
         userSelect: 'none',
-        touchAction: 'none'
+        touchAction: 'none',
+        opacity: disabled ? 0.5 : 1
       }}
       {...props}
     >
