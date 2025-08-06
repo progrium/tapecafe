@@ -867,17 +867,12 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
           />
           {/* Modal Content */}
           <div
-            className="lk-settings-menu-modal"
             style={{
               position: 'fixed',
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              zIndex: 1000,
-              backgroundColor: 'var(--lk-bg2)',
-              borderRadius: 'var(--lk-border-radius)',
-              boxShadow: 'var(--lk-box-shadow)',
-              border: '1px solid var(--lk-border-color)'
+              zIndex: 1000
             }}
           >
             <Settings onClose={() => setShowSettings(false)} />

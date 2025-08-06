@@ -60,24 +60,27 @@ export function Settings({ onClose }) {
     return device?.label || 'Default'
   }
 
-  const handleDisplayNameSubmit = async (e) => {
-    e.preventDefault()
-    if (!room?.localParticipant || !displayName.trim()) return
+  // Auto-save display name when closing
+  const handleClose = async () => {
+    if (room?.localParticipant && displayName.trim()) {
+      try {
+        const metadata = JSON.stringify({ displayName: displayName.trim() })
+        await room.localParticipant.setMetadata(metadata)
+        console.log('✏️ Settings: Updated display name to:', displayName.trim())
 
-    try {
-      const metadata = JSON.stringify({ displayName: displayName.trim() })
-      await room.localParticipant.setMetadata(metadata)
-      console.log('✏️ Settings: Updated display name to:', displayName.trim())
+        // Manually trigger metadata change event for ParticipantNamesContext
+        room.emit('participantMetadataChanged', metadata, room.localParticipant)
+        console.log('✏️ Settings: Manually triggered participantMetadataChanged event')
 
-      // Manually trigger metadata change event for ParticipantNamesContext
-      room.emit('participantMetadataChanged', metadata, room.localParticipant)
-      console.log('✏️ Settings: Manually triggered participantMetadataChanged event')
-
-      // Also save to localStorage for future sessions
-      localStorage.setItem('displayName', displayName.trim())
-    } catch (error) {
-      console.error('Failed to update display name:', error)
-      alert('Failed to update display name')
+        // Also save to localStorage for future sessions
+        localStorage.setItem('displayName', displayName.trim())
+      } catch (error) {
+        console.error('Failed to update display name:', error)
+      }
+    }
+    
+    if (onClose) {
+      onClose()
     }
   }
 
@@ -106,7 +109,7 @@ export function Settings({ onClose }) {
         </h3>
         {onClose && (
           <button
-            onClick={onClose}
+            onClick={handleClose}
             style={{
               background: 'none',
               border: 'none',
@@ -122,47 +125,52 @@ export function Settings({ onClose }) {
       </div>
 
       {/* Display Name Section */}
-      <div style={{ marginBottom: '1rem' }}>
-        <h4 style={{
-          margin: '0 0 0.5rem 0',
-          fontSize: '0.9rem',
-          color: 'var(--lk-fg3)'
+      <div style={{ 
+        marginBottom: '1.5rem',
+        padding: '1rem',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: '8px',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginBottom: '0.75rem'
         }}>
-          Display Name
-        </h4>
-        <form onSubmit={handleDisplayNameSubmit} style={{ display: 'flex', gap: '0.5rem' }}>
-          <input
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            placeholder="Enter display name"
-            style={{
-              flex: 1,
-              padding: '0.5rem',
-              backgroundColor: 'var(--lk-control-bg)',
-              border: '1px solid var(--lk-border-color)',
-              borderRadius: 'var(--lk-border-radius)',
-              color: 'var(--lk-fg)',
-              fontSize: '0.875rem'
-            }}
-          />
-          <button
-            type="submit"
-            disabled={!displayName.trim()}
-            style={{
-              padding: '0.5rem 1rem',
-              backgroundColor: 'var(--lk-accent-bg)',
-              color: 'var(--lk-accent-fg)',
-              border: 'none',
-              borderRadius: 'var(--lk-border-radius)',
-              cursor: displayName.trim() ? 'pointer' : 'not-allowed',
-              opacity: displayName.trim() ? 1 : 0.6,
-              fontSize: '0.875rem'
-            }}
-          >
-            Save
-          </button>
-        </form>
+          <span style={{ fontSize: '1.1rem' }}>👤</span>
+          <h4 style={{
+            margin: 0,
+            fontSize: '0.95rem',
+            fontWeight: '600',
+            color: 'var(--lk-fg)'
+          }}>
+            Display Name
+          </h4>
+        </div>
+        <input
+          type="text"
+          value={displayName}
+          onChange={(e) => setDisplayName(e.target.value)}
+          placeholder="Enter display name"
+          style={{
+            width: '100%',
+            padding: '0.75rem',
+            backgroundColor: 'var(--lk-control-bg)',
+            border: '1px solid rgba(255, 255, 255, 0.2)',
+            borderRadius: '6px',
+            color: 'var(--lk-fg)',
+            fontSize: '0.875rem'
+          }}
+        />
+        <div style={{
+          fontSize: '0.75rem',
+          color: 'var(--lk-fg3)',
+          marginTop: '0.5rem',
+          opacity: 0.7
+        }}>
+          Changes save automatically when you close settings
+        </div>
       </div>
 
       {/* Audio Device Section */}
