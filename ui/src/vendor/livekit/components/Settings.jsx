@@ -17,6 +17,22 @@ export function Settings({ onClose }) {
     return ''
   })
 
+  // Handle device changes - update localStorage and refresh tracks if needed
+  const handleDeviceChange = (kind, deviceId) => {
+    console.log('🔄 Device changed in settings:', kind, deviceId)
+    
+    if (kind === 'videoinput') {
+      localStorage.setItem('selectedCamera', deviceId)
+    } else if (kind === 'audioinput') {
+      localStorage.setItem('selectedMicrophone', deviceId)
+    }
+    
+    // Refresh video tracks if currently active
+    if (window._refreshVideoTracks) {
+      window._refreshVideoTracks()
+    }
+  }
+
   const handleDisplayNameSubmit = async (e) => {
     e.preventDefault()
     if (!room?.localParticipant || !displayName.trim()) return
@@ -130,7 +146,7 @@ export function Settings({ onClose }) {
         }}>
           Microphone
         </h4>
-        <MediaDeviceMenu kind="audioinput" />
+        <MediaDeviceMenu kind="audioinput" onActiveDeviceChange={handleDeviceChange} />
       </div>
 
       {/* Video Device Section */}
@@ -142,7 +158,7 @@ export function Settings({ onClose }) {
         }}>
           Camera
         </h4>
-        <MediaDeviceMenu kind="videoinput" />
+        <MediaDeviceMenu kind="videoinput" onActiveDeviceChange={handleDeviceChange} />
       </div>
     </div>
   )

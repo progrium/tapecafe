@@ -243,44 +243,6 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
     }
   }, [room, displayName])
 
-  // Pre-acquire tracks when localParticipant becomes available
-  useEffect(() => {
-    if (!room || !localParticipant) return
-
-    // Don't re-acquire if we already have tracks
-    if (room._preAcquiredVideoTrack || room._tracksBeingAcquired) return
-
-    room._tracksBeingAcquired = true
-
-    const preAcquireTracks = async () => {
-      console.log('🎥 Local participant ready - creating tracks for instant toggling...')
-
-      try {
-        // Import the necessary classes
-        const { createLocalVideoTrack, createLocalAudioTrack } = await import('livekit-client')
-
-        // Create tracks but don't publish them yet
-        const videoTrack = await createLocalVideoTrack()
-        const audioTrack = await createLocalAudioTrack()
-
-        console.log('📷 Local video track created:', !!videoTrack)
-        console.log('🎤 Local audio track created:', !!audioTrack)
-
-        // Store tracks on the room for later use
-        room._preAcquiredVideoTrack = videoTrack
-        room._preAcquiredAudioTrack = audioTrack
-
-        console.log('🚀 Tracks ready - toggling should now be instant!')
-      } catch (error) {
-        console.error('Failed to create local tracks:', error)
-        console.log('⚠️ Falling back to regular track creation on demand')
-      } finally {
-        room._tracksBeingAcquired = false
-      }
-    }
-
-    preAcquireTracks()
-  }, [room, localParticipant])
 
   // Local participant available for use if needed
 

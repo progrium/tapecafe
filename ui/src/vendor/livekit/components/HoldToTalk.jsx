@@ -15,25 +15,25 @@ export function HoldToTalk({ onDeviceError, disabled = false, playbackStatus, ..
 
     try {
       if (!isMicOn) {
-        // Turn mic ON - publish audio and video
-        const preAcquiredVideoTrack = room._preAcquiredVideoTrack
-        const preAcquiredAudioTrack = room._preAcquiredAudioTrack
+        // Turn mic ON - create and publish audio and video with selected devices
+        const { createLocalVideoTrack, createLocalAudioTrack } = await import('livekit-client')
+        
+        // Get selected devices from localStorage
+        const selectedCamera = localStorage.getItem('selectedCamera')
+        const selectedMicrophone = localStorage.getItem('selectedMicrophone')
+        
+        console.log('📷 Using camera:', selectedCamera || 'default')
+        console.log('🎤 Using microphone:', selectedMicrophone || 'default')
 
-        if (preAcquiredVideoTrack) {
-          console.log('📷 Publishing pre-acquired video track')
-          await localParticipant.publishTrack(preAcquiredVideoTrack)
-        } else {
-          console.log('📷 Creating and publishing video track')
-          await localParticipant.setCameraEnabled(true)
-        }
+        // Create video track with selected camera
+        const videoOptions = selectedCamera ? { deviceId: { exact: selectedCamera } } : {}
+        const videoTrack = await createLocalVideoTrack(videoOptions)
+        await localParticipant.publishTrack(videoTrack)
 
-        if (preAcquiredAudioTrack) {
-          console.log('🎤 Publishing pre-acquired audio track')
-          await localParticipant.publishTrack(preAcquiredAudioTrack)
-        } else {
-          console.log('🎤 Creating and publishing audio track')
-          await localParticipant.setMicrophoneEnabled(true)
-        }
+        // Create audio track with selected microphone  
+        const audioOptions = selectedMicrophone ? { deviceId: { exact: selectedMicrophone } } : {}
+        const audioTrack = await createLocalAudioTrack(audioOptions)
+        await localParticipant.publishTrack(audioTrack)
 
         setIsMicOn(true)
         console.log('✅ Microphone ON - audio and video published')
@@ -108,6 +108,27 @@ export function HoldToTalk({ onDeviceError, disabled = false, playbackStatus, ..
       turnOffMicSync()
     }
   }, [disabled, isMicOn, room, localParticipant, isPublishing])
+
+  // Function to refresh tracks if mic is currently on
+  const refreshTracksIfNeeded = async () => {
+    if (!isMicOn || isPublishing) return
+    
+    console.log('🔄 Refreshing tracks with new device selection')
+    // Simply toggle off and on to use new devices
+    await toggleMic() // Turn off
+    // Small delay to ensure cleanup
+    setTimeout(() => toggleMic(), 100) // Turn back on with new devices
+  }
+
+  // Expose refresh function so Settings can call it
+  useEffect(() => {
+    // Store refresh function globally so Settings component can call it
+    window._refreshVideoTracks = refreshTracksIfNeeded
+    
+    return () => {
+      delete window._refreshVideoTracks
+    }
+  }, [isMicOn, isPublishing])
 
   // Cleanup on unmount
   useEffect(() => {
