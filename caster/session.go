@@ -75,7 +75,13 @@ func New(serverURL, filename, title string) (*Session, error) {
 	}
 
 	if title == "" && filename != "" {
-		title = filepath.Base(filename)
+		title, err = ffmpeg.FileTitle(filename)
+		if err != nil {
+			return nil, err
+		}
+		if title == "" {
+			title = filepath.Base(filename)
+		}
 	}
 
 	return &Session{
@@ -120,6 +126,7 @@ func (s *Session) Start() error {
 }
 
 func (s *Session) Shutdown() error {
+	s.setStatus(StatusFinished)
 	return s.rpc.Close()
 }
 
@@ -290,15 +297,23 @@ func (s *Session) play(startMs int) error {
 
 func (s *Session) seek(posMs int) error {
 	s.mu.Lock()
+	oldPosMs := s.State.PositionMs
 	s.State.PositionMs = posMs
 	s.State.Position = ffmpeg.FormatTimeMs(posMs)
 	status := s.State.Status
 	s.mu.Unlock()
-	defer s.sendState()
 	if status == StatusPlaying {
 		if err := s.FFmpeg.Start(s.Filename, posMs, s.LocalIngress.String()); err != nil {
 			s.setStatus(StatusError)
 			return err
+		}
+		offsetMs := posMs - oldPosMs
+		if offsetMs > 0 {
+			log.Println("seeking forward", offsetMs)
+			return s.setStatus(StatusFwd)
+		} else if offsetMs < 0 {
+			log.Println("seeking forward", offsetMs)
+			return s.setStatus(StatusBack)
 		}
 		return s.setStatus(StatusSeeking)
 	}

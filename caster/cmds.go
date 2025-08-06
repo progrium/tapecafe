@@ -11,6 +11,26 @@ func cmds(sess *Session) map[string]func([]string) error {
 	if sess.Filename == "" {
 		return map[string]func([]string) error{}
 	}
+	slashYouTube := func(args []string) error {
+		sess.pause()
+		sess.setStatus(StatusDownload)
+		filename, err := DownloadYoutubeVideo(args[0])
+		if err != nil {
+			return err
+		}
+		title, err := ffmpeg.FileTitle(filename)
+		if err != nil {
+			return err
+		}
+		sess.mu.Lock()
+		sess.Filename = filename
+		sess.State.Title = title
+		sess.mu.Unlock()
+		if err := sess.loadFile(); err != nil {
+			return err
+		}
+		return sess.play(0)
+	}
 	slashPlaySeek := func(args []string) error {
 		startTime := sess.State.Position
 		if len(args) > 0 {
@@ -27,7 +47,10 @@ func cmds(sess *Session) map[string]func([]string) error {
 		return sess.pause()
 	}
 	slashBack := func(args []string) error {
-		sess.pause()
+		if err := sess.FFmpeg.Stop(); err != nil {
+			sess.setStatus(StatusError)
+			return err
+		}
 		backTime := "00:10"
 		if len(args) > 0 {
 			if strings.Contains(args[0], ":") {
@@ -46,15 +69,16 @@ func cmds(sess *Session) map[string]func([]string) error {
 		if newPosMs < 0 {
 			newPosMs = 0
 		}
-		sess.State.PositionMs = newPosMs
-		sess.State.Position = ffmpeg.FormatTimeMs(newPosMs)
 		sess.mu.Unlock()
 
 		log.Println("seeking back to", sess.State.Position)
-		return sess.play(sess.State.PositionMs)
+		return sess.seek(newPosMs)
 	}
 	slashForward := func(args []string) error {
-		sess.pause()
+		if err := sess.FFmpeg.Stop(); err != nil {
+			sess.setStatus(StatusError)
+			return err
+		}
 		forwardTime := "00:10"
 		if len(args) > 0 {
 			if strings.Contains(args[0], ":") {
@@ -70,12 +94,10 @@ func cmds(sess *Session) map[string]func([]string) error {
 
 		sess.mu.Lock()
 		newPosMs := sess.State.PositionMs + forwardMs
-		sess.State.PositionMs = newPosMs
-		sess.State.Position = ffmpeg.FormatTimeMs(newPosMs)
 		sess.mu.Unlock()
 
 		log.Println("seeking forward to", sess.State.Position)
-		return sess.play(sess.State.PositionMs)
+		return sess.seek(newPosMs)
 	}
 	return map[string]func([]string) error{
 		"/play":    slashPlaySeek,
@@ -84,18 +106,7 @@ func cmds(sess *Session) map[string]func([]string) error {
 		"/back":    slashBack,
 		"/fwd":     slashForward,
 		"/forward": slashForward,
+		"/yt":      slashYouTube,
+		"/youtube": slashYouTube,
 	}
-}
-
-func detectYouTubeURL(s string) (string, bool) {
-	if !strings.HasPrefix(s, "https://www.youtube.com/") &&
-		!strings.HasPrefix(s, "https://youtu.be/") &&
-		!strings.HasPrefix(s, "https://youtube.com") {
-		return "", false
-	}
-	s = strings.ReplaceAll(s, "https://www.youtube.com/watch?v=", "")
-	s = strings.ReplaceAll(s, "https://youtu.be/", "")
-	s = strings.ReplaceAll(s, "https://www.youtube.com/shorts/", "")
-	s = strings.ReplaceAll(s, "https://youtube.com/shorts/", "")
-	return s, true
 }

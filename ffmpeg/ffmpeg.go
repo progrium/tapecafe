@@ -2,6 +2,7 @@ package ffmpeg
 
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -135,6 +136,27 @@ func StreamFile(filename string, seekMs int, output string, run int, updates cha
 	return cmd, nil
 }
 
+func MergeAV(videoFilename, audioFilename, outputFilename, title string) error {
+	cmd := exec.Command("ffmpeg", "-i", videoFilename, "-i", audioFilename, "-metadata", "title="+title, "-c", "copy", "-shortest", outputFilename)
+	return cmd.Run()
+}
+
+func FileTitle(filename string) (string, error) {
+	format, err := ProbeFormat(filename)
+	if err != nil {
+		return "", err
+	}
+	tags, ok := format["tags"].(map[string]any)
+	if !ok {
+		return "", nil
+	}
+	title, ok := tags["title"].(string)
+	if !ok {
+		return "", nil
+	}
+	return title, nil
+}
+
 func FileDurationMs(filename string) (int, error) {
 	format, err := ProbeFormat(filename)
 	if err != nil {
@@ -142,40 +164,24 @@ func FileDurationMs(filename string) (int, error) {
 	}
 
 	durMs := 0.0
-	duration := format["duration"]
+	duration := format["duration"].(string)
 	fmt.Sscanf(duration, "%f", &durMs)
 
 	return int(durMs * 1000), nil
 }
 
-func ProbeFormat(filename string) (map[string]string, error) {
-	cmd := exec.Command("ffprobe", "-i", filename, "-show_format", "-v", "quiet")
+func ProbeFormat(filename string) (map[string]any, error) {
+	cmd := exec.Command("ffprobe", "-i", filename, "-show_format", "-v", "quiet", "-of", "json")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, err
 	}
 
-	lines := strings.Split(string(output), "\n")
-	formatMap := make(map[string]string)
-	inFormat := false
-	for _, line := range lines {
-		line = strings.TrimSpace(line)
-		if line == "[FORMAT]" {
-			inFormat = true
-			continue
-		}
-		if line == "[/FORMAT]" {
-			break
-		}
-		if inFormat && line != "" {
-			if idx := strings.Index(line, "="); idx != -1 {
-				key := line[:idx]
-				value := line[idx+1:]
-				formatMap[key] = value
-			}
-		}
+	var format map[string]any
+	if err := json.Unmarshal(output, &format); err != nil {
+		return nil, err
 	}
-	return formatMap, nil
+	return format["format"].(map[string]any), nil
 }
 
 // formatTimeMs takes milliseconds and returns a string in mm:ss or hh:mm:ss format.

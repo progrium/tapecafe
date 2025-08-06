@@ -22,5 +22,6 @@ const (
 	StatusBack     Status = "⏮ BACK"
 	StatusFinished Status = "⏏ EJECT"
 	StatusLive     Status = "⏺ LIVE FEED"
+	StatusDownload Status = "⏬ DOWNLOADING"
 	StatusError    Status = "! ERROR"
 )
