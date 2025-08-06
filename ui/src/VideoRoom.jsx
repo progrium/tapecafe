@@ -67,7 +67,6 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
     let lastStatus = ""
     stateFeed.onmessage = (event) => {
       const update = JSON.parse(event.data)
-      const osd = document.querySelector('#osd')
       if (lastStatus !== "" && update.Status === "") {
         linger = true
         setTimeout(() => {
