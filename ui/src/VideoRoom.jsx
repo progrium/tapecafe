@@ -373,8 +373,10 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
           <div style={{
             position: 'absolute',
             inset: 0,
+            overflow: 'hidden',
             visibility: isVideoPoppedOut ? 'hidden' : 'visible'
           }}>
+            <div id="snow"></div>
             <div id="osd" style={{
               position: 'absolute',
               top: '10px',
