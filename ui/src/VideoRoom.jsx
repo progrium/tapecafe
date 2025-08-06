@@ -154,6 +154,8 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
   const startY = useRef(0)
   const startWidth = useRef(0)
   const startHeight = useRef(0)
+  const popupWindowRef = useRef(null)
+  const popupVideoRef = useRef(null)
 
   // Function to update individual participant volume
   const updateParticipantVolume = (participantIdentity, volume) => {
@@ -295,6 +297,34 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
   const carouselTracks = tracks.filter(trackRef => {
     return trackRef.participant?.identity !== 'streambot'
   })
+
+  // Sync popup video when tracks change
+  useEffect(() => {
+    if (popupVideoRef.current && popupWindowRef.current && !popupWindowRef.current.closed) {
+      // Find the streambot video element
+      let videoElement = document.querySelector('video[data-lk-source="camera"]')
+      if (!videoElement) {
+        videoElement = document.querySelector('.lk-grid-layout video')
+      }
+      if (!videoElement) {
+        videoElement = document.querySelector('video')
+      }
+
+      if (videoElement && videoElement.srcObject) {
+        // Re-assign the srcObject to sync the video state
+        popupVideoRef.current.srcObject = videoElement.srcObject
+        
+        // Sync play/pause state
+        if (videoElement.paused) {
+          popupVideoRef.current.pause()
+        } else {
+          popupVideoRef.current.play().catch(err => {
+            console.log('Popup video play failed:', err)
+          })
+        }
+      }
+    }
+  }, [gridTracks]) // Re-sync when grid tracks change
 
   useEffect(() => {
     const handleMouseMove = (e) => {
@@ -481,6 +511,9 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                 const popup = window.open('', 'videoPopout', 'width=800,height=600,resizable=yes,toolbar=no,menubar=no,scrollbars=no,status=no')
 
                 if (popup) {
+                  // Store popup window reference
+                  popupWindowRef.current = popup
+
                   // Hide the main video in this window
                   setIsVideoPoppedOut(true)
 
@@ -488,6 +521,14 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                   const checkClosed = setInterval(() => {
                     if (popup.closed) {
                       setIsVideoPoppedOut(false)
+                      
+                      // Cleanup event listeners
+                      if (popup._cleanupListeners) {
+                        popup._cleanupListeners()
+                      }
+                      
+                      popupWindowRef.current = null
+                      popupVideoRef.current = null
                       clearInterval(checkClosed)
                     }
                   }, 1000)
@@ -591,7 +632,41 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
                   setTimeout(() => {
                     const popupVideo = popup.document.getElementById('popout-video')
                     if (popupVideo && videoElement.srcObject) {
+                      // Store popup video reference
+                      popupVideoRef.current = popupVideo
+                      
+                      // Clone the stream to avoid conflicts
                       popupVideo.srcObject = videoElement.srcObject
+                      
+                      // Sync current play state
+                      if (!videoElement.paused) {
+                        popupVideo.play().catch(err => {
+                          console.log('Initial popup video play failed:', err)
+                        })
+                      }
+                      
+                      // Add mutation observer to sync video state changes
+                      const syncVideoState = () => {
+                        if (popupVideo && videoElement) {
+                          if (videoElement.paused && !popupVideo.paused) {
+                            popupVideo.pause()
+                          } else if (!videoElement.paused && popupVideo.paused) {
+                            popupVideo.play().catch(err => {
+                              console.log('Popup video sync play failed:', err)
+                            })
+                          }
+                        }
+                      }
+                      
+                      // Listen for play/pause events on main video
+                      videoElement.addEventListener('play', syncVideoState)
+                      videoElement.addEventListener('pause', syncVideoState)
+                      
+                      // Store cleanup function
+                      popup._cleanupListeners = () => {
+                        videoElement.removeEventListener('play', syncVideoState)
+                        videoElement.removeEventListener('pause', syncVideoState)
+                      }
                     }
                   }, 100)
                 }
