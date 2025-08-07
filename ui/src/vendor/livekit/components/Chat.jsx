@@ -43,14 +43,19 @@ export const Chat = forwardRef(function Chat({
       const isOwnMessage = latestMessage.from?.identity === localParticipant?.identity
 
       if (!document.hasFocus() && !isOwnMessage) {
-        try {
-          const audio = new Audio('/assets/tapemsg.wav')
-          audio.volume = 0.3 // Keep it subtle
-          audio.play().catch(err => {
-            console.log('Could not play notification sound:', err)
-          })
-        } catch (error) {
-          console.log('Error creating notification audio:', error)
+        // Check if notification sounds are enabled
+        const notificationSoundsEnabled = localStorage.getItem('notificationSounds') !== 'false'
+        
+        if (notificationSoundsEnabled) {
+          try {
+            const audio = new Audio('/assets/tapemsg.wav')
+            audio.volume = 0.3 // Keep it subtle
+            audio.play().catch(err => {
+              console.log('Could not play notification sound:', err)
+            })
+          } catch (error) {
+            console.log('Error creating notification audio:', error)
+          }
         }
       }
     }

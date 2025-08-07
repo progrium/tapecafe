@@ -20,6 +20,9 @@ export function Settings({ onClose }) {
   const [devices, setDevices] = useState({ cameras: [], microphones: [] })
   const [selectedCamera, setSelectedCamera] = useState(() => localStorage.getItem('selectedCamera') || '')
   const [selectedMicrophone, setSelectedMicrophone] = useState(() => localStorage.getItem('selectedMicrophone') || '')
+  const [notificationSounds, setNotificationSounds] = useState(() => 
+    localStorage.getItem('notificationSounds') !== 'false' // Default to enabled
+  )
 
   // Get available devices
   useEffect(() => {
@@ -58,6 +61,13 @@ export function Settings({ onClose }) {
   const getDeviceName = (devices, deviceId) => {
     const device = devices.find(d => d.deviceId === deviceId)
     return device?.label || 'Default'
+  }
+
+  // Handle notification sound toggle
+  const handleNotificationToggle = () => {
+    const newValue = !notificationSounds
+    setNotificationSounds(newValue)
+    localStorage.setItem('notificationSounds', newValue.toString())
   }
 
   // Auto-save display name when closing
@@ -278,6 +288,83 @@ export function Settings({ onClose }) {
             </option>
           ))}
         </select>
+      </div>
+
+      {/* Notification Settings */}
+      <div style={{ 
+        marginTop: '1.5rem',
+        padding: '1rem',
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: '8px',
+        border: '1px solid rgba(255, 255, 255, 0.1)'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.5rem',
+          marginBottom: '0.75rem'
+        }}>
+          <span style={{ fontSize: '1.1rem' }}>🔔</span>
+          <h4 style={{
+            margin: 0,
+            fontSize: '0.95rem',
+            fontWeight: '600',
+            color: 'var(--lk-fg)'
+          }}>
+            Notifications
+          </h4>
+        </div>
+        
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '0.5rem 0'
+        }}>
+          <span style={{
+            fontSize: '0.875rem',
+            color: 'var(--lk-fg)'
+          }}>
+            Chat message sounds
+          </span>
+          
+          {/* iOS-style toggle switch */}
+          <div
+            onClick={handleNotificationToggle}
+            style={{
+              position: 'relative',
+              width: '44px',
+              height: '24px',
+              backgroundColor: notificationSounds ? '#34c759' : 'rgba(255, 255, 255, 0.3)',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              transition: 'background-color 0.2s ease'
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: '2px',
+                left: notificationSounds ? '22px' : '2px',
+                width: '20px',
+                height: '20px',
+                backgroundColor: 'white',
+                borderRadius: '50%',
+                transition: 'left 0.2s ease',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.3)'
+              }}
+            />
+          </div>
+        </div>
+        
+        <div style={{
+          fontSize: '0.75rem',
+          color: 'var(--lk-fg3)',
+          marginTop: '0.5rem',
+          opacity: 0.7
+        }}>
+          Plays when messages arrive while app is in background
+        </div>
       </div>
     </div>
   )
