@@ -22,6 +22,7 @@ export const Chat = forwardRef(function Chat({
   const [justSentMessage, setJustSentMessage] = useState(false)
   const [showNewMessageIndicator, setShowNewMessageIndicator] = useState(false)
   const [localHoveredAuthor, setLocalHoveredAuthor] = useState(null)
+  const [lastMessageCount, setLastMessageCount] = useState(0)
   const { localParticipant } = useLocalParticipant()
 
   // Use provided hover state or local fallback
@@ -33,6 +34,29 @@ export const Chat = forwardRef(function Chat({
   }, [messageDecoder, messageEncoder, channelTopic])
 
   const { chatMessages, send, isSending } = useChat(chatOptions)
+
+  // Play notification sound for new messages when app is not focused
+  useEffect(() => {
+    if (chatMessages.length > lastMessageCount && lastMessageCount > 0) {
+      // Only play sound if window is not focused and it's not our own message
+      const latestMessage = chatMessages[chatMessages.length - 1]
+      const isOwnMessage = latestMessage.from?.identity === localParticipant?.identity
+
+      if (!document.hasFocus() && !isOwnMessage) {
+        try {
+          const audio = new Audio('/assets/tapemsg.wav')
+          audio.volume = 0.3 // Keep it subtle
+          audio.play().catch(err => {
+            console.log('Could not play notification sound:', err)
+          })
+        } catch (error) {
+          console.log('Error creating notification audio:', error)
+        }
+      }
+    }
+
+    setLastMessageCount(chatMessages.length)
+  }, [chatMessages, lastMessageCount, localParticipant])
 
   // Wrap send function to track when user sends messages
   const wrappedSend = async (message) => {
@@ -79,13 +103,13 @@ export const Chat = forwardRef(function Chat({
       const element = ulRef.current
       const wasAtBottomBefore = wasAtBottom
       const isAtBottomNow = checkIfAtBottom()
-      
+
       // Update wasAtBottom state for next time
       setWasAtBottom(isAtBottomNow)
-      
+
       // Scroll to bottom if:
       // 1. User was at bottom before new message
-      // 2. User just sent a message 
+      // 2. User just sent a message
       // 3. This is the first message
       if (wasAtBottomBefore || justSentMessage || chatMessages.length === 1) {
         element.scrollTo({ top: element.scrollHeight })
@@ -94,7 +118,7 @@ export const Chat = forwardRef(function Chat({
         // Show new message indicator if user is scrolled up and new message arrived
         setShowNewMessageIndicator(true)
       }
-      
+
       // Reset the justSentMessage flag
       if (justSentMessage) {
         setJustSentMessage(false)
@@ -106,7 +130,7 @@ export const Chat = forwardRef(function Chat({
   const handleScroll = useCallback(() => {
     const isAtBottom = checkIfAtBottom()
     setWasAtBottom(isAtBottom)
-    
+
     // Hide indicator when user scrolls to bottom
     if (isAtBottom) {
       setShowNewMessageIndicator(false)
@@ -124,9 +148,9 @@ export const Chat = forwardRef(function Chat({
   return (
     <ParticipantNamesProvider>
       <div {...props} className="lk-chat" style={{ ...props.style, alignItems: 'stretch' }}>
-        <div className="lk-chat-header" style={{ 
-          display: 'flex', 
-          alignItems: 'center', 
+        <div className="lk-chat-header" style={{
+          display: 'flex',
+          alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
           width: '100%'
@@ -148,7 +172,7 @@ export const Chat = forwardRef(function Chat({
 
                 const participantColor = getParticipantColor(msg.from?.identity)
                 const isOwnMessage = msg.from?.identity === localParticipant?.identity
-                
+
                 return (
                   <ChatEntry
                     key={msg.id ?? idx}
@@ -164,10 +188,10 @@ export const Chat = forwardRef(function Chat({
                 )
               })}
           </ul>
-          
+
           {/* New message indicator */}
           {showNewMessageIndicator && (
-            <div 
+            <div
               onClick={handleNewMessageClick}
               style={{
                 position: 'absolute',
@@ -195,7 +219,7 @@ export const Chat = forwardRef(function Chat({
             disabled={isSending}
             ref={inputRef}
             placeholder="Enter a message..."
-            style={{ 
+            style={{
               resize: 'none',
               overflowY: 'auto'
             }}
