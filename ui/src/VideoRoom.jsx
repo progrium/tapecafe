@@ -41,6 +41,7 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
   const roomName = getRoomFromToken(token)
   const [streambotVolume, setStreambotVolume] = useState(1.0)
   const [playbackStatus, setPlaybackStatus] = useState('')
+  const [osdContent, setOsdContent] = useState('█ NO TAPE')
 
   // Listen for volume changes from popup window
   useEffect(() => {
@@ -66,24 +67,51 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
     }
     let linger = false
     let lastStatus = ""
+    let hasContent = false // Track if we have actual content loaded
+    let lingerTimeout = null
+    
     stateFeed.onmessage = (event) => {
       const update = JSON.parse(event.data)
-      if (lastStatus !== "" && update.Status === "") {
+      
+      // If we have Title/Length, it means content is loaded
+      if (update.Title && update.Length) {
+        hasContent = true
+      }
+      
+      // Clear any existing linger timeout when we get a new non-empty status
+      if (update.Status !== "" && lingerTimeout) {
+        clearTimeout(lingerTimeout)
+        lingerTimeout = null
+        linger = false
+      }
+      
+      // Start linger when going from status to empty
+      if (lastStatus !== "" && update.Status === "" && !linger) {
         linger = true
-        setTimeout(() => {
+        lingerTimeout = setTimeout(() => {
           linger = false
-          console.log("🔄 Linger timeout")
+          lingerTimeout = null
+          
+          // Process the delayed empty status update
+          const osdText = hasContent ? '' : '█ NO TAPE'
+          document.querySelector('#osd').textContent = osdText;
+          setOsdContent(osdText)
+          setPlaybackStatus('')
+          
+          console.log("🔄 Linger timeout - cleared OSD")
         }, 2000);
       }
-      if (!linger) {
-        document.querySelector('#osd').textContent = update.Status;
+      
+      // Process status updates immediately unless we're lingering on an empty status
+      if (!linger || update.Status !== "") {
+        const osdText = update.Status || (hasContent ? '' : '█ NO TAPE')
+        document.querySelector('#osd').textContent = osdText;
+        setOsdContent(osdText)
+        setPlaybackStatus(update.Status)
       }
+      
       lastStatus = update.Status
-      
-      // Update playback status
-      setPlaybackStatus(update.Status)
-      
-      console.log('🔄 State message:', update.Status, update)
+      console.log('🔄 State message:', update.Status, update, 'hasContent:', hasContent, 'linger:', linger)
     }
     stateFeed.onerror = (error) => {
       console.error('🚫 State connection error:', error)
@@ -130,14 +158,14 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
         onDisconnected={handleDisconnected}
         onError={handleError}
       >
-        <RoomContent displayName={displayName} url={url} token={token} streambotVolume={streambotVolume} setStreambotVolume={setStreambotVolume} playbackStatus={playbackStatus} />
+        <RoomContent displayName={displayName} url={url} token={token} streambotVolume={streambotVolume} setStreambotVolume={setStreambotVolume} playbackStatus={playbackStatus} osdContent={osdContent} />
         <RoomAudioRenderer />
       </LiveKitRoom>
     </div>
   )
 }
 
-function RoomContent({ displayName, url, token, streambotVolume, setStreambotVolume, playbackStatus }) {
+function RoomContent({ displayName, url, token, streambotVolume, setStreambotVolume, playbackStatus, osdContent }) {
   const { localParticipant } = useLocalParticipant()
   const allParticipants = useParticipants()
   const room = useRoomContext()
@@ -376,7 +404,13 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
             overflow: 'hidden',
             visibility: isVideoPoppedOut ? 'hidden' : 'visible'
           }}>
-            <div id="snow"></div>
+            {/* Show snow when no tape, hide video element */}
+            <div 
+              id="snow"
+              style={{
+                display: osdContent === '█ NO TAPE' ? 'block' : 'none'
+              }}
+            ></div>
             <div id="osd" style={{
               position: 'absolute',
               top: '10px',
@@ -387,9 +421,12 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
               pointerEvents: 'none',
               textShadow: '0 0 4px rgba(0, 0, 0, 0.8), 0 0 8px rgba(0, 0, 0, 0.6)'
             }}>█ NO TAPE</div>
-            <GridLayout tracks={gridTracks} style={{ height: '100%' }}>
-              <StreamParticipantTile />
-            </GridLayout>
+            {/* Only show video grid when we have tape */}
+            {osdContent !== '█ NO TAPE' && (
+              <GridLayout tracks={gridTracks} style={{ height: '100%' }}>
+                <StreamParticipantTile />
+              </GridLayout>
+            )}
           </div>
 
           {/* Carousel Layout (everyone except streambot) - Position changes based on popup state */}
