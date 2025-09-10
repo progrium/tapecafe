@@ -35,12 +35,14 @@ import (
 var (
 	bindAddr string
 
-	lkURL      string
-	ingressURL string
-	ingressKey string
+	lkURL string
 
-	stateListeners sync.Map
+	stateListeners map[string]*sync.Map
 )
+
+func init() {
+	stateListeners = make(map[string]*sync.Map)
+}
 
 func serveCmd() *cli.Command {
 	cmd := &cli.Command{
@@ -54,14 +56,14 @@ func serveCmd() *cli.Command {
 
 			fmt.Println("Listening on:", publicURL(l))
 
-			if err := ensureIngress(); err != nil {
-				log.Fatal("ensure ingress:", err)
-			}
+			// if err := ensureIngress(); err != nil {
+			// 	log.Fatal("ensure ingress:", err)
+			// }
 
 			mux := http.NewServeMux()
-			mux.Handle("/cast/ingress", websocket.Handler(server.HandleIngress))
-			mux.Handle("/cast/rpc", websocket.Handler(serveRPC))
-			mux.Handle("/state", websocket.Handler(handleState))
+			mux.Handle("/-/cast/ingress", websocket.Handler(server.HandleIngress))
+			mux.Handle("/-/cast/rpc", websocket.Handler(serveRPC))
+			mux.Handle("/-/state", websocket.Handler(handleState))
 			mux.Handle("/rtc", http.HandlerFunc(server.ProxyRTC))
 			mux.Handle("/", http.HandlerFunc(handleParticipate))
 
@@ -92,17 +94,39 @@ func corsMiddleware(next http.Handler) http.Handler {
 }
 
 func handleState(conn *websocket.Conn) {
-	stateListeners.Store(conn, true)
+	room := conn.Request().URL.Query().Get("room")
+	if room == "" {
+		log.Println("No room provided")
+		conn.Close()
+		return
+	}
+	log.Println("New state connection for room:", room)
+	_, ok := stateListeners[room]
+	if !ok {
+		stateListeners[room] = &sync.Map{}
+	}
+	stateListeners[room].Store(conn, true)
 	<-conn.Request().Context().Done()
-	stateListeners.Delete(conn)
+	stateListeners[room].Delete(conn)
 }
 
 func serveRPC(conn *websocket.Conn) {
-	log.Println("New RPC connection")
+	room := conn.Request().URL.Query().Get("room")
+	if room == "" {
+		log.Println("No room provided")
+		conn.Close()
+		return
+	}
+	log.Println("New RPC connection for room:", room)
 	conn.PayloadType = websocket.BinaryFrame
 	defer conn.Close()
 	peer := talk.NewPeer(mux.New(conn), codec.CBORCodec{})
 	peer.Handle("cast.ingress", rpc.HandlerFunc(func(r rpc.Responder, c *rpc.Call) {
+		ingressKey, err := ensureIngress(room)
+		if err != nil {
+			r.Return(err)
+			return
+		}
 		r.Return(fmt.Sprintf("/live/%s", ingressKey))
 	}))
 	peer.Handle("cast.state", rpc.HandlerFunc(func(r rpc.Responder, c *rpc.Call) {
@@ -116,11 +140,15 @@ func serveRPC(conn *websocket.Conn) {
 			log.Println("state:", err)
 			return
 		}
-		stateListeners.Range(func(key, value any) bool {
+		_, ok := stateListeners[room]
+		if !ok {
+			stateListeners[room] = &sync.Map{}
+		}
+		stateListeners[room].Range(func(key, value any) bool {
 			if conn, ok := key.(*websocket.Conn); ok {
 				_, err := conn.Write(msg)
 				if err != nil {
-					stateListeners.Delete(conn)
+					stateListeners[room].Delete(conn)
 					log.Println("state:", err)
 				}
 			}
@@ -137,7 +165,7 @@ func serveRPC(conn *websocket.Conn) {
 		room, err := lksdk2.ConnectToRoom("http://localhost:7880", lksdk2.ConnectInfo{
 			APIKey:              "devkey",
 			APISecret:           "secret",
-			RoomName:            "theater",
+			RoomName:            room,
 			ParticipantIdentity: "chatbot",
 		}, &lksdk2.RoomCallback{
 			ParticipantCallback: lksdk2.ParticipantCallback{
@@ -203,12 +231,13 @@ func handleParticipate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if r.URL.Path == "/" {
+	if r.URL.Query().Get("token") == "" {
+		room := strings.TrimPrefix(r.URL.Path, "/")
 		md := true
 		at := auth.NewAccessToken("devkey", "secret")
 		grant := &auth.VideoGrant{
 			RoomJoin:             true,
-			Room:                 "theater",
+			Room:                 room,
 			CanUpdateOwnMetadata: &md,
 		}
 		at.AddGrant(grant).
@@ -221,7 +250,7 @@ func handleParticipate(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, fmt.Sprintf("/%s?liveKitUrl=%s&token=%s", token, lkURL, token), http.StatusTemporaryRedirect)
+		http.Redirect(w, r, fmt.Sprintf("/%s?token=%s", room, token), http.StatusTemporaryRedirect)
 
 		// meetURL = fmt.Sprintf("%s?liveKitUrl=%s&token=%s", meetURL, lkURL, token)
 		// meetURL := cmp.Or(os.Getenv("MEET_URL"), "https://meet.livekit.io/custom")
@@ -264,19 +293,19 @@ func setupListener() (l net.Listener, err error) {
 	return
 }
 
-func ensureIngress() error {
+func ensureIngress(room string) (string, error) {
 	ingressClient := lksdk.NewIngressClient("ws://localhost:7880", "devkey", "secret")
 
 	ctx := context.TODO()
 	lki, err := ingressClient.ListIngress(ctx, &lkp.ListIngressRequest{})
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	found := false
 	var ingress *lkp.IngressInfo
 	for _, i := range lki.GetItems() {
-		if i.RoomName == "theater" {
+		if i.RoomName == room {
 			found = true
 			ingress = i
 			break
@@ -285,18 +314,16 @@ func ensureIngress() error {
 	if !found {
 		ingress, err = ingressClient.CreateIngress(ctx, &lkp.CreateIngressRequest{
 			InputType:           0,
-			Name:                "theater-ingress",
-			RoomName:            "theater",
-			ParticipantIdentity: "streambot",
+			Name:                room + "-ingress",
+			RoomName:            room,
+			ParticipantIdentity: "caster",
 		})
 		if err != nil {
-			return err
+			return "", err
 		}
 	}
-	ingressURL = ingress.GetUrl()
-	ingressKey = ingress.GetStreamKey()
-	log.Println("INGRESS URL:", ingressURL)
-	log.Println("INGRESS KEY:", ingressKey)
+	log.Println("INGRESS URL:", ingress.GetUrl())
+	log.Println("INGRESS KEY:", ingress.GetStreamKey())
 
-	return nil
+	return ingress.GetStreamKey(), nil
 }

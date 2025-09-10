@@ -7,8 +7,10 @@ function App() {
   const [shouldJoin, setShouldJoin] = useState(false)
 
   useEffect(() => {
+    const url = new URL(window.location.href)
+    url.pathname = "/"
     const urlParams = new URLSearchParams(window.location.search)
-    const liveKitUrl = urlParams.get('liveKitUrl')
+    const liveKitUrl = urlParams.get('liveKitUrl') || url.toString()
     const token = urlParams.get('token')
     
     if (liveKitUrl && token) {

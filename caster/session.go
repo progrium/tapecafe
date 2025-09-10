@@ -20,6 +20,7 @@ import (
 )
 
 type Session struct {
+	Room         string
 	Filename     string
 	ServerURL    url.URL
 	LocalIngress url.URL
@@ -30,9 +31,9 @@ type Session struct {
 	mu  sync.Mutex
 }
 
-func dialRPC(baseURL url.URL) (*rpc.Client, error) {
+func dialRPC(baseURL url.URL, room string) (*rpc.Client, error) {
 	rpcURL := baseURL
-	rpcURL.Path = "/cast/rpc"
+	rpcURL.Path = "/-/cast/rpc"
 
 	originURL := baseURL
 	originURL.Path = ""
@@ -44,7 +45,7 @@ func dialRPC(baseURL url.URL) (*rpc.Client, error) {
 
 	var ws *websocket.Conn
 	var err error
-	ws, err = websocket.Dial(rpcURL.String(), "", originURL.String())
+	ws, err = websocket.Dial(rpcURL.String()+"?room="+room, "", originURL.String())
 	if err != nil {
 		return nil, err
 
@@ -53,7 +54,7 @@ func dialRPC(baseURL url.URL) (*rpc.Client, error) {
 	return rpc.NewClient(mux.New(ws), codec.CBORCodec{}), nil
 }
 
-func New(serverURL, filename, title string) (*Session, error) {
+func New(serverURL, room, filename, title string) (*Session, error) {
 	u, err := url.Parse(serverURL)
 	if err != nil {
 		return nil, err
@@ -69,15 +70,15 @@ func New(serverURL, filename, title string) (*Session, error) {
 	}
 	u.Path = ""
 
-	client, err := dialRPC(*u)
+	client, err := dialRPC(*u, room)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dial RPC: %w", err)
 	}
 
 	if title == "" && filename != "" {
 		title, err = ffmpeg.FileTitle(filename)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("get title: %w %s", err, filename)
 		}
 		if title == "" {
 			title = filepath.Base(filename)
@@ -85,6 +86,7 @@ func New(serverURL, filename, title string) (*Session, error) {
 	}
 
 	return &Session{
+		Room:      room,
 		Filename:  filename,
 		ServerURL: *u,
 		State: SharedState{
@@ -105,7 +107,7 @@ func (s *Session) Start() error {
 		return fmt.Errorf("session already started")
 	}
 
-	if err := s.setupIngress(); err != nil {
+	if err := s.setupIngress(s.Room); err != nil {
 		return err
 	}
 
@@ -189,9 +191,9 @@ func (s *Session) sendState() error {
 	return nil
 }
 
-func (s *Session) setupIngress() error {
+func (s *Session) setupIngress(room string) error {
 	var ingressPath string
-	_, err := s.rpc.Call(context.Background(), "cast.ingress", nil, &ingressPath)
+	_, err := s.rpc.Call(context.Background(), "cast.ingress", room, &ingressPath)
 	if err != nil {
 		return err
 	}
@@ -205,7 +207,7 @@ func (s *Session) setupIngress() error {
 	s.LocalIngress.Host = l.Addr().String()
 	s.LocalIngress.Path = ingressPath
 	ingressURL := s.ServerURL
-	ingressURL.Path = "/cast/ingress"
+	ingressURL.Path = "/-/cast/ingress"
 	s.mu.Unlock()
 
 	log.Println("ingress:", s.LocalIngress.String())
@@ -222,7 +224,7 @@ func (s *Session) setupIngress() error {
 			if ws != nil {
 				ws.Close()
 			}
-			ws, err = websocket.Dial(ingressURL.String(), "", s.ServerURL.String())
+			ws, err = websocket.Dial(ingressURL.String()+"?room="+room, "", s.ServerURL.String())
 			if err != nil {
 				log.Fatal("ingress:", err)
 			}

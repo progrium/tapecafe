@@ -2,8 +2,10 @@ import { useState, useRef, useEffect } from 'react'
 
 function ConnectForm({ onConnect }) {
   const [url, setUrl] = useState(() => {
+    const url = new URL(window.location.href)
+    url.pathname = "/"
     const urlParams = new URLSearchParams(window.location.search)
-    return urlParams.get('liveKitUrl') || ''
+    return urlParams.get('liveKitUrl') || url.toString()
   })
   const [token, setToken] = useState(() => {
     const urlParams = new URLSearchParams(window.location.search)

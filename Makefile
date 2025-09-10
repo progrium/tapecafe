@@ -27,7 +27,7 @@ build: ui/dist
 ## Build Docker image
 docker:
 	$(DOCKER_CMD) build -t tapecafe .
-.PHONY: build-docker
+.PHONY: docker
 
 ## Build UI
 ui:

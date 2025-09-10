@@ -14,7 +14,11 @@ function Timeline({ url, onSendMessage }) {
   useEffect(() => {
     if (!url) return
 
-    const stateFeed = new WebSocket(`${url}/state`)
+    const u = new URL(url)
+    const room = u.pathname.slice(1)
+    u.pathname = "/-/state"
+    u.searchParams.set("room", room)
+    const stateFeed = new WebSocket(u.toString())
 
     stateFeed.onmessage = (event) => {
       try {

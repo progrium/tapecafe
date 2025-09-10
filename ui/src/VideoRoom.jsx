@@ -58,7 +58,10 @@ function VideoRoom({ url, token, displayName, onDisconnect }) {
   const handleConnected = async (room) => {
     console.log('✅ Successfully connected to room:', room?.name || roomName || 'Unknown')
     console.log('🎥 Track pre-acquisition will happen when localParticipant is ready')
-    const stateFeed = new WebSocket(`${url}/state`)
+    const u = new URL(url)
+    u.pathname = "/-/state"
+    u.searchParams.set("room", room?.name || roomName)
+    const stateFeed = new WebSocket(u.toString())
     stateFeed.onerror = (error) => {
       console.error('🚫 State connection error:', error);
     }
@@ -172,7 +175,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
 
   // Filter out bot participants
   const participants = allParticipants.filter(participant =>
-    participant.identity !== 'streambot' && participant.identity !== 'chatbot'
+    participant.identity !== 'caster' && participant.identity !== 'chatbot'
   )
 
   // Determine if push-to-talk should be disabled based on playback status
@@ -231,7 +234,7 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
   // Update streambot volume
   useEffect(() => {
     // Find streambot participant
-    const streambot = allParticipants.find(p => p.identity === 'streambot')
+    const streambot = allParticipants.find(p => p.identity === 'caster')
     if (streambot) {
       // Get audio tracks for streambot
       const audioTracks = Array.from(streambot.audioTrackPublications.values())
@@ -300,12 +303,12 @@ function RoomContent({ displayName, url, token, streambotVolume, setStreambotVol
 
   // Filter tracks for GridLayout - only streambot
   const gridTracks = tracks.filter(trackRef => {
-    return trackRef.participant?.identity === 'streambot'
+    return trackRef.participant?.identity === 'caster'
   })
 
   // Filter tracks for CarouselLayout - everyone except streambot
   const carouselTracks = tracks.filter(trackRef => {
-    return trackRef.participant?.identity !== 'streambot'
+    return trackRef.participant?.identity !== 'caster'
   })
 
   // Sync popup video when tracks change
